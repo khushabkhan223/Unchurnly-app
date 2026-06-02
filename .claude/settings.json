@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "PreToolUse": [{
+      "matcher": "Write|Edit|MultiEdit",
+      "hooks": [{
+        "type": "command",
+        "command": "echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'sk_live_[a-zA-Z0-9]+|sk_test_[a-zA-Z0-9]+|whsec_[a-zA-Z0-9]+' && exit 2 || exit 0"
+      }]
+    }]
+  }
+}
