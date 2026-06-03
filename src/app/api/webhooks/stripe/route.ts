@@ -6,9 +6,11 @@ import { logger } from '@/lib/logger'
 
 type StripeConnectionRow = {
   encrypted_webhook_secret: string | null
+  stripe_baseline_mrr: number
 }
 
 type IdRow = { id: string }
+type MrrRow = { stripe_baseline_mrr: number }
 
 export async function POST(request: Request) {
   // Raw body MUST come before any other read operation
@@ -23,7 +25,7 @@ export async function POST(request: Request) {
 
   const { data: connectionData, error: connectionError } = await supabase
     .from('stripe_connections')
-    .select('encrypted_webhook_secret')
+    .select('encrypted_webhook_secret, stripe_baseline_mrr')
     .eq('user_id', uid)
     .maybeSingle()
 
@@ -63,6 +65,12 @@ export async function POST(request: Request) {
       case 'invoice.payment_failed':
         await handleInvoicePaymentFailed(supabase, uid, event.data.object as Stripe.Invoice)
         break
+      case 'customer.subscription.created':
+        await handleSubscriptionCreated(supabase, uid, event.data.object as Stripe.Subscription)
+        break
+      case 'customer.subscription.updated':
+        await handleSubscriptionUpdated(supabase, uid, event)
+        break
       case 'customer.subscription.deleted':
         await handleSubscriptionDeleted(supabase, uid, event.data.object as Stripe.Subscription)
         break
@@ -75,6 +83,41 @@ export async function POST(request: Request) {
   }
 
   return new Response(null, { status: 200 })
+}
+
+// Normalizes a list of subscription items to a total monthly dollar amount
+function subItemsToMonthlyDollars(
+  items: Array<{ price?: { unit_amount?: number | null; recurring?: { interval?: string } | null } | null; quantity?: number | null }>
+): number {
+  let totalCents = 0
+  for (const item of items) {
+    const unitAmount = item.price?.unit_amount
+    if (!unitAmount) continue
+    const qty = item.quantity ?? 1
+    const interval = item.price?.recurring?.interval
+    let monthly = unitAmount * qty
+    if (interval === 'year') monthly = monthly / 12
+    else if (interval === 'week') monthly = monthly * 4.33
+    else if (interval === 'day') monthly = monthly * 30
+    totalCents += monthly
+  }
+  return totalCents / 100
+}
+
+async function getCurrentMrr(supabase: SupabaseClient, uid: string): Promise<number> {
+  const { data } = await supabase
+    .from('stripe_connections')
+    .select('stripe_baseline_mrr')
+    .eq('user_id', uid)
+    .maybeSingle()
+  return data ? (data as MrrRow).stripe_baseline_mrr : 0
+}
+
+async function updateMrr(supabase: SupabaseClient, uid: string, mrr: number): Promise<void> {
+  await supabase
+    .from('stripe_connections')
+    .update({ stripe_baseline_mrr: Math.max(0, mrr) })
+    .eq('user_id', uid)
 }
 
 async function handleInvoicePaymentFailed(
@@ -162,6 +205,46 @@ async function handleInvoicePaymentFailed(
   ])
 }
 
+async function handleSubscriptionCreated(
+  supabase: SupabaseClient,
+  uid: string,
+  subscription: Stripe.Subscription
+): Promise<void> {
+  const delta = subItemsToMonthlyDollars(subscription.items.data)
+  if (delta === 0) return
+  const current = await getCurrentMrr(supabase, uid)
+  await updateMrr(supabase, uid, current + delta)
+}
+
+async function handleSubscriptionUpdated(
+  supabase: SupabaseClient,
+  uid: string,
+  event: Stripe.Event
+): Promise<void> {
+  const sub = event.data.object as Stripe.Subscription
+  const prevAttrs = event.data.previous_attributes as Record<string, unknown> | undefined
+
+  // Only adjust MRR if items (prices) actually changed
+  if (!prevAttrs?.items) return
+
+  const newValue = subItemsToMonthlyDollars(sub.items.data)
+
+  // Extract old items from previous_attributes — narrow carefully
+  type RawItem = {
+    price?: { unit_amount?: number | null; recurring?: { interval?: string } | null } | null
+    quantity?: number | null
+  }
+  type RawItemsList = { data?: RawItem[] }
+  const oldItems = (prevAttrs.items as RawItemsList | undefined)?.data ?? []
+  const oldValue = subItemsToMonthlyDollars(oldItems)
+
+  const delta = newValue - oldValue
+  if (delta === 0) return
+
+  const current = await getCurrentMrr(supabase, uid)
+  await updateMrr(supabase, uid, current + delta)
+}
+
 async function handleSubscriptionDeleted(
   supabase: SupabaseClient,
   uid: string,
@@ -191,4 +274,11 @@ async function handleSubscriptionDeleted(
     .update({ status: 'cancelled' })
     .eq('monitored_customer_id', monitoredCustomerId)
     .eq('status', 'active')
+
+  // Subtract this subscription's value from MRR baseline
+  const delta = subItemsToMonthlyDollars(subscription.items.data)
+  if (delta > 0) {
+    const current = await getCurrentMrr(supabase, uid)
+    await updateMrr(supabase, uid, current - delta)
+  }
 }

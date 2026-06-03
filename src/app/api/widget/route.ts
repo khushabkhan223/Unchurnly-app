@@ -1,5 +1,7 @@
 import { createServerClient } from '@/lib/supabase'
 
+type AppKeyRow = { user_id: string }
+
 const JS_TEMPLATE = `(function(){
   window.unchurnly=window.unchurnly||{};
   window.unchurnly.appKey='__APP_KEY__';
@@ -13,6 +15,7 @@ const JS_TEMPLATE = `(function(){
     f.style.cssText='width:480px;max-width:95vw;height:600px;border:none;border-radius:12px;background:white;';
     f.src=window.unchurnly.apiBase+'/cancel-flow?key='+encodeURIComponent(window.unchurnly.appKey)+'&customerId='+encodeURIComponent(config.customerId)+'&authHash='+encodeURIComponent(config.authHash);
     o.appendChild(f);document.body.appendChild(o);
+    fetch(window.unchurnly.apiBase+'/api/widget',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({appKey:window.unchurnly.appKey})}).catch(function(){});
     o.addEventListener('click',function(e){if(e.target===o)document.body.removeChild(o);});
     window.addEventListener('message',function(e){if(e.data==='unchurnly:close'){var el=document.getElementById('unchurnly-overlay');if(el&&el.parentNode)el.parentNode.removeChild(el);}});
   };
@@ -45,4 +48,40 @@ export async function GET(request: Request) {
       'Cache-Control': 'public, max-age=300',
     },
   })
+}
+
+export async function POST(request: Request) {
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    return new Response('Bad Request', { status: 400 })
+  }
+
+  const appKey =
+    body !== null && typeof body === 'object'
+      ? (body as Record<string, unknown>).appKey
+      : undefined
+
+  if (typeof appKey !== 'string' || !appKey) {
+    return new Response('Bad Request', { status: 400 })
+  }
+
+  const supabase = createServerClient()
+  const { data } = await supabase
+    .from('founder_app_keys')
+    .select('user_id')
+    .eq('app_key', appKey)
+    .maybeSingle()
+
+  if (!data) {
+    // Return 200 to not leak whether key exists
+    return new Response(null, { status: 200 })
+  }
+
+  const { user_id } = data as AppKeyRow
+
+  await supabase.from('widget_impressions').insert({ user_id })
+
+  return new Response(null, { status: 200 })
 }

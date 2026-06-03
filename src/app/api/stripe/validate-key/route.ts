@@ -5,6 +5,7 @@ import { verifySessionToken } from '@/lib/session'
 import { encryptToken } from '@/lib/crypto'
 import { createServerClient } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
+import { calculateMrr } from '@/lib/mrr'
 
 export async function POST(request: Request) {
   const cookieStore = await cookies()
@@ -62,6 +63,8 @@ export async function POST(request: Request) {
         enabled_events: [
           'invoice.payment_failed',
           'customer.subscription.deleted',
+          'customer.subscription.created',
+          'customer.subscription.updated',
         ],
         description: 'Unchurnly dunning automation',
       })
@@ -103,6 +106,16 @@ export async function POST(request: Request) {
   if (dbError) {
     return NextResponse.json({ error: 'Failed to save connection' }, { status: 500 })
   }
+
+  // Seed MRR in the background — non-critical, never blocks the response
+  calculateMrr(encryptedToken).then(async (mrr) => {
+    if (mrr > 0) {
+      await createServerClient()
+        .from('stripe_connections')
+        .update({ stripe_baseline_mrr: mrr })
+        .eq('user_id', session.userId)
+    }
+  }).catch(() => {})
 
   return NextResponse.json({ success: true, webhookConfigured })
 }
