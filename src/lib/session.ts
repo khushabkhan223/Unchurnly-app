@@ -47,3 +47,32 @@ export async function clearSessionCookie(): Promise<void> {
   const cookieStore = await cookies()
   cookieStore.delete(SESSION_COOKIE)
 }
+
+export async function signCardUpdateToken(
+  customerId: string,
+  userId: string
+): Promise<string> {
+  return new SignJWT({ customerId, userId, purpose: 'card-update' })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('48h')
+    .sign(getSecret())
+}
+
+export async function verifyCardUpdateToken(
+  token: string
+): Promise<{ customerId: string; userId: string } | null> {
+  try {
+    const { payload } = await jwtVerify(token, getSecret())
+    if (
+      typeof payload.customerId !== 'string' ||
+      typeof payload.userId !== 'string' ||
+      payload.purpose !== 'card-update'
+    ) {
+      return null
+    }
+    return { customerId: payload.customerId, userId: payload.userId }
+  } catch {
+    return null
+  }
+}
