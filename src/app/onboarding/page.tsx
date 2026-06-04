@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle, Copy, Check } from 'lucide-react'
+import { createBrowserClient } from '@/lib/supabase'
 
 const VOICE_TAGS = [
   { emoji: '👔', label: 'Formal / Corporate' },
@@ -13,11 +14,46 @@ const VOICE_TAGS = [
   { emoji: '🛠️', label: 'Developer-to-Developer' },
 ]
 
+type InstallTab = 'script' | 'hmac' | 'init'
+
+const TAB_LABELS: Record<InstallTab, string> = {
+  script: '① Script Tag',
+  hmac: '② Auth Hash',
+  init: '③ Trigger Widget',
+}
+
+const TAB_GUIDE: Record<InstallTab, { where: string; code: string }> = {
+  script: {
+    where:
+      'Paste this once into the <head> of your app. In Next.js, add it to app/layout.tsx inside the <head> tag. In plain HTML, put it just before </head> in index.html. In React (CRA), use public/index.html. It loads asynchronously — zero impact on page speed.',
+    code: '',
+  },
+  hmac: {
+    where:
+      'Run this on your server, never in the browser — it uses your secret APP_SECRET key. Place it in the route or function that renders your billing/account page, where you already have the customer\'s Stripe ID available. Embed the resulting authHash in your page (e.g. a hidden data attribute or server-rendered prop) so the frontend can read it.',
+    code: `const crypto = require('crypto')
+const authHash = crypto
+  .createHmac('sha256', process.env.APP_SECRET)
+  .update(stripeCustomerId)
+  .digest('hex')`,
+  },
+  init: {
+    where:
+      'Call this in the click handler of your Cancel Plan or Downgrade button on the frontend. Pass the stripeCustomerId and the authHash you generated server-side. The widget opens as a fullscreen overlay — no redirect, no page change. Your customers stay on your app.',
+    code: `window.unchurnly.init('show', {
+  customerId: stripeCustomerId,
+  authHash: authHash
+})`,
+  },
+}
+
 export default function OnboardingPage() {
   const router = useRouter()
   const [step, setStep] = useState<1 | 2 | 3>(1)
 
   // Step 1
+  const [companyName, setCompanyName] = useState('')
+  const [supportEmail, setSupportEmail] = useState('')
   const [selectedModel, setSelectedModel] = useState<'B2B' | 'B2C' | 'Both'>('B2B')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [isSavingProfile, setIsSavingProfile] = useState(false)
@@ -30,10 +66,13 @@ export default function OnboardingPage() {
 
   // Step 3
   const [appKey, setAppKey] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<InstallTab>('script')
+  const [copied, setCopied] = useState<string | null>(null)
+  const [widgetConnected, setWidgetConnected] = useState(false)
   const [isCompleting, setIsCompleting] = useState(false)
 
-  // Load (or auto-generate) app key when entering step 3
+  // Load app key + userId on step 3
   useEffect(() => {
     if (step !== 3) return
     async function loadKey() {
@@ -41,10 +80,14 @@ export default function OnboardingPage() {
       const data: unknown = await res.json()
       const payload =
         typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : {}
+
+      if (typeof payload.userId === 'string') setUserId(payload.userId)
+
       if (typeof payload.appKey === 'string' && payload.appKey) {
         setAppKey(payload.appKey)
         return
       }
+
       const genRes = await fetch('/api/app-keys/generate', { method: 'POST' })
       const genData: unknown = await genRes.json()
       const genPayload =
@@ -56,11 +99,28 @@ export default function OnboardingPage() {
     loadKey()
   }, [step])
 
+  // Realtime listener for widget ping detection
+  useEffect(() => {
+    if (step !== 3 || !userId) return
+    const supabase = createBrowserClient()
+    const channel = supabase
+      .channel(`onboarding_widget_${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${userId}` },
+        (payload: { new: Record<string, unknown> }) => {
+          if (payload.new.widget_installed === true) setWidgetConnected(true)
+        }
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [step, userId])
+
   function toggleTag(tag: string) {
     setSelectedTags((prev) => {
       if (prev.includes(tag)) return prev.filter((t) => t !== tag)
       if (prev.length < 2) return [...prev, tag]
-      return [prev[1], tag] // replace oldest
+      return [prev[1], tag]
     })
   }
 
@@ -70,9 +130,10 @@ export default function OnboardingPage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        business_description: '',
         business_model: selectedModel,
         brand_voice: selectedTags.join(', '),
+        company_name: companyName.trim(),
+        support_email: supportEmail.trim(),
       }),
     })
     setIsSavingProfile(false)
@@ -111,13 +172,11 @@ export default function OnboardingPage() {
     router.push('/dashboard')
   }
 
-  async function copyScript() {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
-    const tag = `<script src="${appUrl}/api/widget?key=${appKey}" async></script>`
+  async function copySnippet(text: string, id: string) {
     try {
-      await navigator.clipboard.writeText(tag)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      await navigator.clipboard.writeText(text)
+      setCopied(id)
+      setTimeout(() => setCopied(null), 2000)
     } catch {
       // clipboard unavailable
     }
@@ -127,15 +186,8 @@ export default function OnboardingPage() {
   const scriptTag = appKey
     ? `<script src="${appUrl}/api/widget?key=${appKey}" async></script>`
     : 'Generating key…'
-  const hmacSnippet = `const crypto = require('crypto')
-const authHash = crypto
-  .createHmac('sha256', process.env.APP_SECRET)
-  .update(stripeCustomerId)
-  .digest('hex')`
-  const initSnippet = `window.unchurnly.init('show', {
-  customerId: stripeCustomerId,
-  authHash: authHash
-})`
+
+  const step1Valid = companyName.trim().length > 0 && supportEmail.trim().length > 0 && selectedTags.length > 0
 
   return (
     <div className="min-h-screen bg-[#f9fafb] flex flex-col items-center pt-16 px-4">
@@ -173,6 +225,37 @@ const authHash = crypto
               </p>
             </div>
 
+            {/* Company Name */}
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 block">
+                Company Name
+              </label>
+              <input
+                type="text"
+                placeholder="e.g., Acme Corp"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50"
+              />
+            </div>
+
+            {/* Support Email */}
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 block">
+                Support Email
+              </label>
+              <input
+                type="email"
+                placeholder="e.g., support@acme.com"
+                value={supportEmail}
+                onChange={(e) => setSupportEmail(e.target.value)}
+                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50"
+              />
+              <p className="text-xs text-slate-400 mt-1.5">
+                Used as the reply-to address on recovery emails so customers can reach you directly.
+              </p>
+            </div>
+
             {/* Business Model */}
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
@@ -197,7 +280,7 @@ const authHash = crypto
 
             {/* Brand Voice */}
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1 mt-6">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
                 Brand Voice
               </p>
               <p className="text-xs text-slate-500 mb-3">
@@ -226,7 +309,7 @@ const authHash = crypto
 
             <button
               onClick={handleSaveProfile}
-              disabled={selectedTags.length === 0 || isSavingProfile}
+              disabled={!step1Valid || isSavingProfile}
               className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors"
             >
               {isSavingProfile ? 'Saving…' : 'Continue →'}
@@ -316,59 +399,112 @@ const authHash = crypto
           <div className="space-y-5">
             <div>
               <h1 className="text-xl font-bold text-slate-900">
-                Add the cancel flow widget to your app
+                Install the cancel flow widget
               </h1>
               <p className="text-sm text-slate-500 mt-1">
-                This intercepts cancellations and shows retention offers. Takes 2 minutes to
-                install.
+                Three copy-paste steps. Most founders finish in under 5 minutes.
               </p>
             </div>
 
+            {/* Connection status badge */}
+            <div className={`flex items-center gap-2.5 rounded-xl px-4 py-3 border text-sm font-medium transition-colors ${
+              widgetConnected
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                : 'bg-slate-50 border-slate-200 text-slate-500'
+            }`}>
+              {widgetConnected ? (
+                <>
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Status: ✅ Connection verified!</span>
+                </>
+              ) : (
+                <>
+                  <span className="w-4 h-4 shrink-0 flex items-center justify-center text-base leading-none">⏳</span>
+                  <span>Status: Listening for your site&apos;s snippet…</span>
+                </>
+              )}
+            </div>
+
+            {/* Tab bar */}
+            <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+              {(Object.keys(TAB_LABELS) as InstallTab[]).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`flex-1 py-2 text-xs font-medium transition-colors ${
+                    activeTab === tab
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white text-slate-500 hover:bg-slate-50'
+                  }`}
+                >
+                  {TAB_LABELS[tab]}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab content */}
             <div className="space-y-3">
-              <div>
-                <p className="text-xs text-slate-500 mb-2">
-                  Add to your HTML{' '}
-                  <code className="text-slate-700 bg-slate-100 px-1 rounded">&lt;head&gt;</code>:
-                </p>
-                <div className="relative">
-                  <pre className="text-xs font-mono text-slate-100 bg-slate-950 rounded-xl p-4 overflow-x-auto pr-20">
-                    {scriptTag}
-                  </pre>
-                  <button
-                    onClick={copyScript}
-                    className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-md transition-colors"
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="w-3 h-3 text-emerald-400" />
-                        <span>Copied</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3 h-3" />
-                        <span>Copy</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+              {/* Guidance text */}
+              <p className="text-xs text-slate-500 leading-relaxed">
+                {TAB_GUIDE[activeTab].where}
+              </p>
+
+              {/* Code block */}
+              <div className="relative">
+                <pre className="text-xs font-mono text-slate-100 bg-slate-950 rounded-xl p-4 overflow-x-auto pr-20 leading-relaxed">
+                  {activeTab === 'script' ? scriptTag : TAB_GUIDE[activeTab].code}
+                </pre>
+                <button
+                  onClick={() =>
+                    copySnippet(
+                      activeTab === 'script' ? scriptTag : TAB_GUIDE[activeTab].code,
+                      activeTab
+                    )
+                  }
+                  className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-md transition-colors"
+                >
+                  {copied === activeTab ? (
+                    <>
+                      <Check className="w-3 h-3 text-emerald-400" />
+                      <span>Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3" />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
               </div>
 
-              <div>
-                <p className="text-xs text-slate-500 mb-2">Generate HMAC in your backend:</p>
-                <pre className="text-xs font-mono text-slate-100 bg-slate-950 rounded-xl p-4 overflow-x-auto">
-                  {hmacSnippet}
-                </pre>
-              </div>
-
-              <div>
-                <p className="text-xs text-slate-500 mb-2">On cancel button click:</p>
-                <pre className="text-xs font-mono text-slate-100 bg-slate-950 rounded-xl p-4 overflow-x-auto">
-                  {initSnippet}
-                </pre>
+              {/* Tab navigation hints */}
+              <div className="flex justify-between pt-1">
+                <button
+                  onClick={() => {
+                    const tabs: InstallTab[] = ['script', 'hmac', 'init']
+                    const i = tabs.indexOf(activeTab)
+                    if (i > 0) setActiveTab(tabs[i - 1])
+                  }}
+                  className="text-xs text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-0"
+                  disabled={activeTab === 'script'}
+                >
+                  ← Previous
+                </button>
+                <button
+                  onClick={() => {
+                    const tabs: InstallTab[] = ['script', 'hmac', 'init']
+                    const i = tabs.indexOf(activeTab)
+                    if (i < tabs.length - 1) setActiveTab(tabs[i + 1])
+                  }}
+                  className="text-xs text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-0"
+                  disabled={activeTab === 'init'}
+                >
+                  Next →
+                </button>
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 pt-2">
+            <div className="flex flex-col gap-2 pt-1">
               <button
                 onClick={() => handleComplete(true)}
                 disabled={isCompleting}

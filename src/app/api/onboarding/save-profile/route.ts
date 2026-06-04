@@ -13,10 +13,9 @@ export async function POST(request: Request) {
   const payload =
     typeof body === 'object' && body !== null ? (body as Record<string, unknown>) : {}
 
-  const { business_description, business_model, brand_voice } = payload
+  const { business_model, brand_voice, company_name, support_email } = payload
 
   if (
-    typeof business_description !== 'string' || !business_description.trim() ||
     typeof business_model !== 'string' || !business_model.trim() ||
     typeof brand_voice !== 'string' || !brand_voice.trim()
   ) {
@@ -26,7 +25,12 @@ export async function POST(request: Request) {
   const supabase = createServerClient()
   await supabase
     .from('users')
-    .update({ business_description, business_model, brand_voice })
+    .update({
+      business_model,
+      brand_voice,
+      company_name: typeof company_name === 'string' ? company_name.trim() : null,
+      support_email: typeof support_email === 'string' ? support_email.trim() : null,
+    })
     .eq('id', session.userId)
 
   return NextResponse.json({ success: true })

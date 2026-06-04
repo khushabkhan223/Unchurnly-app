@@ -15,6 +15,7 @@ type SequenceRow = {
   status: string
   started_at: string
   created_at: string
+  recovered_mrr_cents: number | null
   monitored_customers: { mrr_amount: number | null; customer_email: string | null } | null
 }
 
@@ -44,7 +45,7 @@ export async function GET() {
       .maybeSingle(),
     supabase
       .from('dunning_sequences')
-      .select('id, status, started_at, created_at, monitored_customers(mrr_amount, customer_email)')
+      .select('id, status, started_at, created_at, recovered_mrr_cents, monitored_customers(mrr_amount, customer_email)')
       .eq('user_id', session.userId)
       .gte('created_at', thirtyDaysAgo),
     supabase
@@ -74,14 +75,14 @@ export async function GET() {
   const savedEvents = cancellations.filter((e) =>
     ['paused', 'discounted'].includes(e.outcome)
   )
-  const completedSequences = sequences.filter((s) => s.status === 'completed')
+  const recoveredSequences = sequences.filter((s) => s.status === 'recovered')
 
   const mrrSavedFromCancellations = savedEvents.reduce(
     (sum, e) => sum + (e.monitored_customers?.mrr_amount ?? 0) / 100,
     0
   )
-  const mrrSavedFromDunning = completedSequences.reduce(
-    (sum, s) => sum + (s.monitored_customers?.mrr_amount ?? 0) / 100,
+  const mrrSavedFromDunning = recoveredSequences.reduce(
+    (sum, s) => sum + (s.recovered_mrr_cents ?? 0) / 100,
     0
   )
   const mrr_saved = mrrSavedFromCancellations + mrrSavedFromDunning

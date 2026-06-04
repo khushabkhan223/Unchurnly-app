@@ -22,5 +22,8 @@ export async function GET() {
     .eq('user_id', session.userId)
     .maybeSingle()
 
-  return NextResponse.json({ appKey: data ? (data as AppKeyRow).app_key : null })
+  return NextResponse.json({
+    appKey: data ? (data as AppKeyRow).app_key : null,
+    userId: session.userId,
+  })
 }

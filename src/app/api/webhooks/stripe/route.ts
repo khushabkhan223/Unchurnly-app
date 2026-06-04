@@ -3,6 +3,7 @@ import { type SupabaseClient } from '@supabase/supabase-js'
 import { decryptToken } from '@/lib/crypto'
 import { createServerClient } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
+import { generateAndSendDunning } from '@/lib/dunning-ai'
 
 type StripeConnectionRow = {
   encrypted_webhook_secret: string | null
@@ -62,6 +63,9 @@ export async function POST(request: Request) {
 
   try {
     switch (event.type) {
+      case 'invoice.payment_succeeded':
+        await handleInvoicePaymentSucceeded(supabase, uid, event.data.object as Stripe.Invoice)
+        break
       case 'invoice.payment_failed':
         await handleInvoicePaymentFailed(supabase, uid, event.data.object as Stripe.Invoice)
         break
@@ -118,6 +122,50 @@ async function updateMrr(supabase: SupabaseClient, uid: string, mrr: number): Pr
     .from('stripe_connections')
     .update({ stripe_baseline_mrr: Math.max(0, mrr) })
     .eq('user_id', uid)
+}
+
+async function handleInvoicePaymentSucceeded(
+  supabase: SupabaseClient,
+  uid: string,
+  invoice: Stripe.Invoice
+): Promise<void> {
+  const rawCustomer = invoice.customer
+  if (!rawCustomer) return
+  const customerId = typeof rawCustomer === 'string' ? rawCustomer : rawCustomer.id
+
+  const { data: customer } = await supabase
+    .from('monitored_customers')
+    .select('id')
+    .eq('stripe_customer_id', customerId)
+    .eq('user_id', uid)
+    .maybeSingle()
+
+  if (!customer) return
+
+  const monitoredCustomerId = (customer as IdRow).id
+
+  const { data: activeSeq } = await supabase
+    .from('dunning_sequences')
+    .select('id')
+    .eq('monitored_customer_id', monitoredCustomerId)
+    .eq('status', 'active')
+    .maybeSingle()
+
+  if (!activeSeq) return
+
+  await supabase
+    .from('dunning_sequences')
+    .update({
+      status: 'recovered',
+      recovered_at: new Date().toISOString(),
+      recovered_mrr_cents: invoice.amount_paid,
+    })
+    .eq('id', (activeSeq as IdRow).id)
+
+  logger.info('Dunning sequence marked recovered', {
+    sequenceId: (activeSeq as IdRow).id,
+    recovered_mrr_cents: invoice.amount_paid,
+  })
 }
 
 async function handleInvoicePaymentFailed(
@@ -203,6 +251,20 @@ async function handleInvoicePaymentFailed(
     { dunning_sequence_id: sequenceId, day_number: 7, status: 'pending' },
     { dunning_sequence_id: sequenceId, day_number: 14, status: 'pending' },
   ])
+
+  const customerEmail = invoice.customer_email
+  if (customerEmail) {
+    const planName = invoice.lines.data[0]?.description ?? 'your subscription'
+    const amountDue = invoice.amount_due
+    const attemptCount = invoice.attempt_count ?? 1
+    try {
+      await generateAndSendDunning(uid, planName, amountDue, attemptCount, customerEmail)
+    } catch (err) {
+      logger.error('generateAndSendDunning failed', {
+        reason: err instanceof Error ? err.message : 'unknown',
+      })
+    }
+  }
 }
 
 async function handleSubscriptionCreated(
