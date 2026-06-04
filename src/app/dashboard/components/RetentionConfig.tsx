@@ -62,25 +62,26 @@ export default function RetentionConfig({ config }: { config: Config }) {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div>
-        <h1 className="text-xl font-semibold text-zinc-50">Retention</h1>
-        <p className="text-sm text-zinc-500 mt-0.5">Configure cancel flow offers shown to customers</p>
+      {/* Page header */}
+      <div className="border-b border-slate-200 pb-6">
+        <h1 className="text-2xl font-bold text-slate-900">Cancel Flows</h1>
+        <p className="text-sm text-slate-500 mt-1">Configure offers shown to customers who try to cancel</p>
       </div>
 
       {/* Offers card */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
-        <div className="px-6 py-4 border-b border-zinc-800">
-          <p className="text-sm font-medium text-zinc-200">Cancellation Offers</p>
+      <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div className="px-6 py-4 border-b border-slate-100">
+          <h2 className="text-base font-semibold text-slate-900">Retention Offers</h2>
         </div>
 
-        <div className="divide-y divide-zinc-800">
+        <div className="divide-y divide-slate-50">
           {/* Pause */}
           <div className="px-6 py-5">
-            <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-zinc-200">Offer 1-month pause</p>
-                <p className="text-xs text-zinc-500 mt-0.5">
-                  Customer's billing pauses for 30 days, auto-resumes after
+                <p className="text-sm font-medium text-slate-900">Offer 1-month pause</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Customer&apos;s billing pauses for 30 days, auto-resumes after
                 </p>
               </div>
               <Switch checked={pauseEnabled} onCheckedChange={setPauseEnabled} />
@@ -89,40 +90,38 @@ export default function RetentionConfig({ config }: { config: Config }) {
 
           {/* Discount */}
           <div className="px-6 py-5">
-            <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-zinc-200">Offer discount</p>
-                <p className="text-xs text-zinc-500 mt-0.5">
-                  Applied for 3 months via Stripe coupon
-                </p>
+                <p className="text-sm font-medium text-slate-900">Offer discount</p>
+                <p className="text-xs text-slate-500 mt-0.5">Applied for 3 months via Stripe coupon</p>
               </div>
               <Switch checked={discountEnabled} onCheckedChange={setDiscountEnabled} />
             </div>
             {discountEnabled && (
               <div className="mt-3 flex items-center gap-3">
-                <label className="text-xs text-zinc-400">Discount %</label>
+                <label className="text-xs text-slate-500">Discount %</label>
                 <input
                   type="number"
                   min={10}
                   max={50}
                   value={discountPercent}
                   onChange={(e) => setDiscountPercent(Number(e.target.value))}
-                  className="w-20 px-3 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-200 text-sm focus:outline-none focus:border-indigo-500"
+                  className="w-20 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-900 text-sm focus:outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50"
                 />
-                <span className="text-xs text-zinc-500">%</span>
+                <span className="text-xs text-slate-400">%</span>
               </div>
             )}
           </div>
 
           {/* Support link */}
           <div className="px-6 py-5">
-            <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-zinc-200">
+                <p className="text-sm font-medium text-slate-900">
                   Show support link for technical issues
                 </p>
-                <p className="text-xs text-zinc-500 mt-0.5">
-                  Shown when customer selects "Technical issues"
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Shown when customer selects &quot;Technical issues&quot;
                 </p>
               </div>
               <Switch checked={supportEnabled} onCheckedChange={setSupportEnabled} />
@@ -134,45 +133,51 @@ export default function RetentionConfig({ config }: { config: Config }) {
                   placeholder="https://support.yourapp.com"
                   value={supportUrl}
                   onChange={(e) => setSupportUrl(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-200 text-sm focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-900 text-sm focus:outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50"
                 />
               </div>
             )}
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-zinc-800 flex items-center gap-3">
+        <div className="px-6 py-4 border-t border-slate-100 flex items-center gap-3">
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-4 py-2 rounded-lg bg-indigo-500 text-white text-sm font-medium hover:bg-indigo-600 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
             {saving ? 'Saving…' : 'Save changes'}
           </button>
-          {saved && <span className="text-sm text-green-500">Saved</span>}
-          {error && <span className="text-sm text-red-400">{error}</span>}
+          {saved && <span className="text-sm text-emerald-600">Saved</span>}
+          {error && <span className="text-sm text-rose-500">{error}</span>}
         </div>
       </div>
 
       {/* Reason → Offer mapping */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
-        <div className="px-6 py-4 border-b border-zinc-800">
-          <p className="text-sm font-medium text-zinc-200">Reason → Offer mapping</p>
-          <p className="text-xs text-zinc-500 mt-0.5">What each customer sees based on their cancellation reason</p>
+      <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div className="px-6 py-4 border-b border-slate-100">
+          <h2 className="text-base font-semibold text-slate-900">Reason → Offer Mapping</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            What each customer sees based on their cancellation reason
+          </p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-zinc-800">
-                <th className="px-6 py-3 text-left text-xs text-zinc-500 font-medium">Reason</th>
-                <th className="px-6 py-3 text-left text-xs text-zinc-500 font-medium">Offer shown</th>
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Reason
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Offer shown
+                </th>
               </tr>
             </thead>
             <tbody>
               {REASON_MAP.map(({ reason, offer }) => (
-                <tr key={reason} className="border-b border-zinc-800/50">
-                  <td className="px-6 py-3 text-zinc-300">{reason}</td>
-                  <td className="px-6 py-3 text-zinc-400">{offer}</td>
+                <tr key={reason} className="border-b border-slate-50 hover:bg-slate-50">
+                  <td className="px-6 py-3 text-slate-700">{reason}</td>
+                  <td className="px-6 py-3 text-slate-500">{offer}</td>
                 </tr>
               ))}
             </tbody>

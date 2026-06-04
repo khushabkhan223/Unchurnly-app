@@ -10,8 +10,12 @@ function getSecret(): Uint8Array {
   return new TextEncoder().encode(secret)
 }
 
-export async function createSessionToken(userId: string, email: string): Promise<string> {
-  return new SignJWT({ email })
+export async function createSessionToken(
+  userId: string,
+  email: string,
+  onboardingCompleted = false
+): Promise<string> {
+  return new SignJWT({ email, onboardingCompleted })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(userId)
     .setIssuedAt()
@@ -21,18 +25,26 @@ export async function createSessionToken(userId: string, email: string): Promise
 
 export async function verifySessionToken(
   token: string
-): Promise<{ userId: string; email: string } | null> {
+): Promise<{ userId: string; email: string; onboardingCompleted: boolean } | null> {
   try {
     const { payload } = await jwtVerify(token, getSecret())
     if (typeof payload.sub !== 'string' || typeof payload['email'] !== 'string') return null
-    return { userId: payload.sub, email: payload['email'] }
+    return {
+      userId: payload.sub,
+      email: payload['email'],
+      onboardingCompleted: payload['onboardingCompleted'] === true,
+    }
   } catch {
     return null
   }
 }
 
-export async function setSessionCookie(userId: string, email: string): Promise<void> {
-  const token = await createSessionToken(userId, email)
+export async function setSessionCookie(
+  userId: string,
+  email: string,
+  onboardingCompleted = false
+): Promise<void> {
+  const token = await createSessionToken(userId, email, onboardingCompleted)
   const cookieStore = await cookies()
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,

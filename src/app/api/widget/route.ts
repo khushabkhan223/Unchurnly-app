@@ -83,5 +83,18 @@ export async function POST(request: Request) {
 
   await supabase.from('widget_impressions').insert({ user_id })
 
+  const { data: userRow } = await supabase
+    .from('users')
+    .select('widget_installed')
+    .eq('id', user_id)
+    .single()
+
+  if (userRow && !userRow.widget_installed) {
+    await supabase
+      .from('users')
+      .update({ widget_installed: true, widget_first_seen_at: new Date().toISOString() })
+      .eq('id', user_id)
+  }
+
   return new Response(null, { status: 200 })
 }

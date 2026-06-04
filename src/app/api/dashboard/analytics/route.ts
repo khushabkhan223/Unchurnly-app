@@ -25,6 +25,8 @@ type ConnectionRow = {
   webhook_configured_at: string | null
 }
 
+type UserRow = { widget_banner_dismissed_at: string | null; widget_installed: boolean }
+
 export async function GET() {
   const cookieStore = await cookies()
   const token = cookieStore.get('session')?.value
@@ -34,15 +36,10 @@ export async function GET() {
   const supabase = createServerClient()
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
-  const [connResult, keyResult, seqResult, ceResult, impResult] = await Promise.all([
+  const [connResult, seqResult, ceResult, impResult, userResult] = await Promise.all([
     supabase
       .from('stripe_connections')
       .select('stripe_baseline_mrr, webhook_configured_at')
-      .eq('user_id', session.userId)
-      .maybeSingle(),
-    supabase
-      .from('founder_app_keys')
-      .select('app_key')
       .eq('user_id', session.userId)
       .maybeSingle(),
     supabase
@@ -60,12 +57,19 @@ export async function GET() {
       .select('id, created_at')
       .eq('user_id', session.userId)
       .gte('created_at', thirtyDaysAgo),
+    supabase
+      .from('users')
+      .select('widget_banner_dismissed_at, widget_installed')
+      .eq('id', session.userId)
+      .maybeSingle(),
   ])
 
   const connection = connResult.data ? (connResult.data as ConnectionRow) : null
   const sequences = (seqResult.data ?? []) as unknown as SequenceRow[]
   const cancellations = (ceResult.data ?? []) as unknown as CancellationRow[]
   const impressions = (impResult.data ?? []) as ImpressionRow[]
+  const userData = userResult.data ? (userResult.data as UserRow) : null
+  const widget_installed = userData?.widget_installed ?? false
 
   const savedEvents = cancellations.filter((e) =>
     ['paused', 'discounted'].includes(e.outcome)
@@ -91,6 +95,8 @@ export async function GET() {
   const active_sequences = sequences.filter((s) => s.status === 'active').length
   const roi_multiplier = mrr_saved > 0 ? Math.round((mrr_saved / 49) * 10) / 10 : 0
   const has_events = total_events > 0 || sequences.length > 0
+
+  const show_widget_banner = !widget_installed && !userData?.widget_banner_dismissed_at
 
   // Build daily chart data (last 30 days)
   const daily_data = Array.from({ length: 30 }, (_, i) => {
@@ -135,8 +141,9 @@ export async function GET() {
     cancellations_lost,
     stripe_connected: !!connection,
     webhook_configured: !!connection?.webhook_configured_at,
-    widget_installed: !!keyResult.data,
+    widget_installed,
     has_events,
+    show_widget_banner,
     daily_data,
     recent_events: recentEvents,
   })

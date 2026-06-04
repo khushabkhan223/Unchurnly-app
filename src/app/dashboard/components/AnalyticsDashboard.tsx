@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import { useState, useEffect } from 'react'
 import {
   LineChart,
   Line,
@@ -11,7 +11,18 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
-import { CheckCircle, Circle } from 'lucide-react'
+import {
+  TrendingUp,
+  Zap,
+  Target,
+  AlertCircle,
+  Sparkles,
+  Activity,
+  AlertTriangle,
+  CheckCircle,
+  X,
+} from 'lucide-react'
+import { createBrowserClient } from '@/lib/supabase'
 
 type DayData = { date: string; mrr_saved: number; impressions: number }
 type RecentEvent = {
@@ -33,13 +44,26 @@ type Props = {
   cancellations_lost: number
   stripe_connected: boolean
   webhook_configured: boolean
-  widget_installed: boolean
+  initialWidgetInstalled: boolean
   has_events: boolean
+  initialShowBanner: boolean
+  userId: string
   daily_data: DayData[]
   recent_events: RecentEvent[]
 }
 
-const DEMO: Omit<Props, 'stripe_connected' | 'webhook_configured' | 'widget_installed' | 'has_events' | 'daily_data' | 'recent_events' | 'mrr_baseline'> = {
+const DEMO: Omit<
+  Props,
+  | 'stripe_connected'
+  | 'webhook_configured'
+  | 'initialWidgetInstalled'
+  | 'has_events'
+  | 'initialShowBanner'
+  | 'userId'
+  | 'daily_data'
+  | 'recent_events'
+  | 'mrr_baseline'
+> = {
   mrr_saved: 1240,
   roi_multiplier: 25.3,
   offer_acceptance_rate: 31.2,
@@ -53,11 +77,12 @@ function fmt$(n: number) {
   return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 })
 }
 
-function outcomeColor(outcome: string) {
-  if (['paused', 'discounted', 'completed'].includes(outcome)) return 'text-green-500'
-  if (outcome === 'cancelled') return 'text-red-500'
-  if (outcome === 'active') return 'text-indigo-400'
-  return 'text-zinc-400'
+function outcomeBadgeClass(outcome: string) {
+  if (['paused', 'discounted', 'completed'].includes(outcome))
+    return 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+  if (outcome === 'cancelled') return 'bg-rose-50 text-rose-700 border border-rose-100'
+  if (outcome === 'active') return 'bg-blue-50 text-blue-700 border border-blue-100'
+  return 'bg-slate-100 text-slate-600'
 }
 
 function outcomeLabel(outcome: string) {
@@ -75,70 +100,110 @@ function outcomeLabel(outcome: string) {
 export default function AnalyticsDashboard(props: Props) {
   const {
     stripe_connected,
-    webhook_configured,
-    widget_installed,
     has_events,
     daily_data,
     recent_events,
     mrr_baseline,
+    initialShowBanner,
+    initialWidgetInstalled,
+    userId,
   } = props
 
   const isDemo = !stripe_connected && !has_events
   const d = isDemo ? { ...props, ...DEMO } : props
 
-  const showSetup = !stripe_connected || !widget_installed || !has_events
-  const setupItems = [
-    { label: 'Connect your Stripe account', done: stripe_connected },
-    { label: 'Install the widget in your app', done: widget_installed },
-    { label: 'First event received', done: has_events },
-  ]
-
   const failed_est = mrr_baseline * 0.05
   const annual_at_risk = failed_est * 12
-  const recovery_est = annual_at_risk * 0.70
+  const recovery_est = annual_at_risk * 0.7
+
+  const [bannerVisible, setBannerVisible] = useState(initialShowBanner)
+  const [, setWidgetInstalled] = useState(initialWidgetInstalled)
+  const [showSuccessToast, setShowSuccessToast] = useState(false)
+
+  useEffect(() => {
+    const supabase = createBrowserClient()
+    const channel = supabase
+      .channel(`widget_status_${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${userId}` },
+        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
+          if (payload.new.widget_installed === true && !payload.old.widget_installed) {
+            setWidgetInstalled(true)
+            setBannerVisible(false)
+            setShowSuccessToast(true)
+          }
+        }
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [userId])
+
+  async function handleDismiss() {
+    setBannerVisible(false)
+    await fetch('/api/dashboard/dismiss-banner', { method: 'POST' })
+  }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-zinc-50">Analytics</h1>
-        <p className="text-sm text-zinc-500 mt-0.5">Last 30 days</p>
+    <div className="space-y-6 max-w-6xl">
+      {/* Page header */}
+      <div className="border-b border-slate-200 pb-6">
+        <h1 className="text-2xl font-bold text-slate-900">Analytics</h1>
+        <p className="text-sm text-slate-500 mt-1">Revenue recovery and retention performance</p>
       </div>
 
-      {/* Setup checklist */}
-      {showSetup && (
-        <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/5 p-5">
-          <p className="text-sm font-medium text-zinc-200 mb-3">Complete your setup</p>
-          <ul className="space-y-2 mb-4">
-            {setupItems.map(({ label, done }) => (
-              <li key={label} className="flex items-center gap-2 text-sm">
-                {done ? (
-                  <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
-                ) : (
-                  <Circle className="w-4 h-4 text-zinc-600 shrink-0" />
-                )}
-                <span className={done ? 'text-zinc-400 line-through' : 'text-zinc-300'}>
-                  {label}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <Link
+      {/* Widget not installed banner */}
+      {bannerVisible && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+          <p className="text-sm text-amber-800 flex-1">
+            <span className="font-semibold">Widget not installed.</span>{' '}
+            Unchurnly can&apos;t intercept cancellations until the widget is active in your app.
+          </p>
+          <a
             href="/dashboard/settings"
-            className="text-xs font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+            className="text-amber-700 text-sm font-medium hover:text-amber-900 whitespace-nowrap transition-colors"
           >
-            Go to Settings →
-          </Link>
+            Install now →
+          </a>
+          <button
+            onClick={handleDismiss}
+            className="text-amber-400 hover:text-amber-600 ml-1 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Widget verified success toast */}
+      {showSuccessToast && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-3 shadow-sm">
+          <div className="p-1 bg-emerald-500 rounded-full">
+            <CheckCircle className="w-5 h-5 text-white shrink-0" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-emerald-900">Widget verified!</h3>
+            <p className="text-xs text-emerald-700">
+              Unchurnly has detected your widget and is now monitoring cancel attempts live.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowSuccessToast(false)}
+            className="text-emerald-400 hover:text-emerald-600"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
       {/* Demo banner */}
       {isDemo && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-zinc-800/50 border border-zinc-700">
-          <span className="text-xs font-semibold bg-indigo-500 text-white px-2 py-0.5 rounded-full">
+        <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex items-center gap-3">
+          <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full shrink-0">
             DEMO
           </span>
-          <p className="text-sm text-zinc-400">
-            Viewing sample data — connect Stripe to see your real numbers
+          <p className="text-sm text-slate-600">
+            You&apos;re viewing sample data. Connect Stripe to see real metrics.
           </p>
         </div>
       )}
@@ -149,88 +214,112 @@ export default function AnalyticsDashboard(props: Props) {
           label="MRR Saved"
           value={fmt$(d.mrr_saved)}
           sub="this month"
-          valueClass="text-green-500"
+          valueClass="text-emerald-600"
+          icon={TrendingUp}
+          iconBg="bg-emerald-100"
+          iconColor="text-emerald-600"
         />
         <KpiCard
           label="ROI on Unchurnly"
           value={`${d.roi_multiplier}x`}
           sub="return on $49/mo"
-          valueClass="text-indigo-400"
+          valueClass="text-blue-600"
+          icon={Zap}
+          iconBg="bg-blue-100"
+          iconColor="text-blue-600"
         />
         <KpiCard
           label="Offer Acceptance"
           value={`${d.offer_acceptance_rate}%`}
           sub="of cancel attempts saved"
-          valueClass="text-zinc-50"
+          valueClass="text-slate-900"
+          icon={Target}
+          iconBg="bg-purple-100"
+          iconColor="text-purple-600"
         />
         <KpiCard
           label="Active Dunning"
           value={String(d.active_sequences)}
           sub="sequences running"
-          valueClass="text-zinc-50"
+          valueClass="text-slate-900"
+          icon={AlertCircle}
+          iconBg="bg-orange-100"
+          iconColor="text-orange-600"
         />
       </div>
 
       {/* Recovery potential */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-        <p className="text-sm font-medium text-zinc-300 mb-4">Your recovery potential</p>
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles className="w-4 h-4 text-blue-600" />
+          <h2 className="text-base font-semibold text-slate-900">Recovery Potential</h2>
+        </div>
         {mrr_baseline > 0 ? (
           <div className="grid grid-cols-3 gap-6">
             <div>
-              <p className="text-xs text-zinc-500 mb-1">Monthly at risk (est. 5%)</p>
-              <p className="font-mono text-lg text-red-400">{fmt$(failed_est)}</p>
+              <p className="text-sm text-slate-500 mb-1">Monthly at risk (est. 5%)</p>
+              <p className="font-mono text-2xl font-bold text-blue-700">{fmt$(failed_est)}</p>
             </div>
             <div>
-              <p className="text-xs text-zinc-500 mb-1">Annual at risk</p>
-              <p className="font-mono text-lg text-zinc-200">{fmt$(annual_at_risk)}</p>
+              <p className="text-sm text-slate-500 mb-1">Annual at risk</p>
+              <p className="font-mono text-2xl font-bold text-blue-700">{fmt$(annual_at_risk)}</p>
             </div>
             <div>
-              <p className="text-xs text-zinc-500 mb-1">Unchurnly recovers (est. 70%)</p>
-              <p className="font-mono text-lg text-green-500">{fmt$(recovery_est)}</p>
+              <p className="text-sm text-slate-500 mb-1">Unchurnly recovers (est. 70%)</p>
+              <p className="font-mono text-2xl font-bold text-blue-700">{fmt$(recovery_est)}</p>
             </div>
           </div>
         ) : (
-          <p className="text-sm text-zinc-500">
-            Connect Stripe to calculate your recovery potential.
-          </p>
+          <div className="flex flex-col items-center py-4 gap-2">
+            <p className="text-slate-500 text-sm">
+              Connect Stripe to unlock your recovery forecast
+            </p>
+            <a
+              href="/dashboard/settings"
+              className="text-blue-600 text-sm font-medium hover:text-blue-700 underline-offset-4 hover:underline"
+            >
+              Connect Stripe →
+            </a>
+          </div>
         )}
       </div>
 
-      {/* Chart — always rendered per spec */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-        <p className="text-sm font-medium text-zinc-300 mb-4">Last 30 days</p>
-        <div className="w-full h-56">
+      {/* Chart — always rendered */}
+      <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <h2 className="text-base font-semibold text-slate-900 mb-4">Activity — Last 30 days</h2>
+        <div className="w-full" style={{ height: 280 }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={daily_data} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272A" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis
                 dataKey="date"
-                tick={{ fill: '#71717A', fontSize: 11 }}
+                tick={{ fill: '#94a3b8', fontSize: 11 }}
                 tickLine={false}
                 axisLine={false}
                 interval={5}
               />
               <YAxis
-                tick={{ fill: '#71717A', fontSize: 11 }}
+                tick={{ fill: '#94a3b8', fontSize: 11 }}
                 tickLine={false}
                 axisLine={false}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#18181B',
-                  border: '1px solid #27272A',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '8px',
-                  color: '#FAFAFA',
                   fontSize: '12px',
                 }}
+                labelStyle={{ color: '#475569' }}
+                itemStyle={{ color: '#475569' }}
               />
               <Legend
-                wrapperStyle={{ fontSize: '12px', color: '#71717A', paddingTop: '8px' }}
+                wrapperStyle={{ fontSize: '12px', color: '#94a3b8', paddingTop: '8px' }}
               />
               <Line
                 type="monotone"
                 dataKey="mrr_saved"
-                stroke="#22C55E"
+                stroke="#059669"
                 strokeWidth={2}
                 dot={false}
                 name="MRR Saved ($)"
@@ -238,9 +327,9 @@ export default function AnalyticsDashboard(props: Props) {
               <Line
                 type="monotone"
                 dataKey="impressions"
-                stroke="#71717A"
+                stroke="#cbd5e1"
                 strokeWidth={2}
-                strokeDasharray="5 5"
+                strokeDasharray="4 4"
                 dot={false}
                 name="Widget Opens"
               />
@@ -250,21 +339,30 @@ export default function AnalyticsDashboard(props: Props) {
       </div>
 
       {/* Recent events */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
-        <div className="px-6 py-4 border-b border-zinc-800">
-          <p className="text-sm font-medium text-zinc-300">Recent events</p>
+      <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div className="px-6 py-4 border-b border-slate-100">
+          <h2 className="text-base font-semibold text-slate-900">Recent Activity</h2>
         </div>
         {recent_events.length === 0 ? (
-          <p className="px-6 py-8 text-sm text-zinc-600 text-center">
-            No events yet. Events appear here once customers interact with the widget.
-          </p>
+          <div className="py-16 flex flex-col items-center gap-2">
+            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mb-2">
+              <Activity className="w-5 h-5 text-slate-400" />
+            </div>
+            <p className="text-slate-900 font-medium text-sm">No activity yet</p>
+            <p className="text-slate-500 text-sm">
+              Events appear here once customers interact with the widget.
+            </p>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-zinc-800">
+              <thead className="bg-slate-50">
+                <tr>
                   {['Customer', 'Type', 'Outcome', 'MRR', 'Date'].map((h) => (
-                    <th key={h} className="px-6 py-3 text-left text-xs text-zinc-500 font-medium">
+                    <th
+                      key={h}
+                      className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400"
+                    >
                       {h}
                     </th>
                   ))}
@@ -272,26 +370,32 @@ export default function AnalyticsDashboard(props: Props) {
               </thead>
               <tbody>
                 {recent_events.map((ev, i) => (
-                  <tr key={i} className="border-b border-zinc-800/50 hover:bg-white/[0.02]">
-                    <td className="px-6 py-3 text-zinc-300 max-w-[180px] truncate">{ev.email}</td>
+                  <tr key={i} className="border-b border-slate-50 hover:bg-slate-50">
+                    <td className="px-6 py-3 text-slate-900 font-medium max-w-[180px] truncate">
+                      {ev.email}
+                    </td>
                     <td className="px-6 py-3">
                       <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
                           ev.type === 'cancellation'
-                            ? 'bg-zinc-800 text-zinc-300'
-                            : 'bg-indigo-500/10 text-indigo-400'
+                            ? 'bg-slate-100 text-slate-600 border-slate-200'
+                            : 'bg-blue-50 text-blue-700 border-blue-100'
                         }`}
                       >
                         {ev.type === 'cancellation' ? 'Cancellation' : 'Dunning'}
                       </span>
                     </td>
-                    <td className={`px-6 py-3 font-medium ${outcomeColor(ev.outcome)}`}>
-                      {outcomeLabel(ev.outcome)}
+                    <td className="px-6 py-3">
+                      <span
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${outcomeBadgeClass(ev.outcome)}`}
+                      >
+                        {outcomeLabel(ev.outcome)}
+                      </span>
                     </td>
-                    <td className="px-6 py-3 font-mono text-zinc-400">
+                    <td className="px-6 py-3 font-mono text-slate-600">
                       {ev.mrr > 0 ? fmt$(ev.mrr) : '—'}
                     </td>
-                    <td className="px-6 py-3 text-zinc-500">
+                    <td className="px-6 py-3 text-slate-400 text-xs">
                       {new Date(ev.date).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
@@ -313,17 +417,28 @@ function KpiCard({
   value,
   sub,
   valueClass,
+  icon: Icon,
+  iconBg,
+  iconColor,
 }: {
   label: string
   value: string
   sub: string
   valueClass: string
+  icon: React.ElementType
+  iconBg: string
+  iconColor: string
 }) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-      <p className="text-xs text-zinc-500 mb-2">{label}</p>
-      <p className={`font-mono text-3xl font-semibold ${valueClass}`}>{value}</p>
-      <p className="text-xs text-zinc-600 mt-1">{sub}</p>
+    <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-2px_rgba(0,0,0,0.05)]">
+      <div className="flex items-start justify-between mb-3">
+        <span className="text-sm text-slate-500 font-medium">{label}</span>
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${iconBg}`}>
+          <Icon className={`w-4 h-4 ${iconColor}`} />
+        </div>
+      </div>
+      <p className={`text-5xl font-bold font-mono leading-none ${valueClass}`}>{value}</p>
+      <p className="text-xs text-slate-400 mt-1">{sub}</p>
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifySessionToken } from '@/lib/session'
+import { createServerClient } from '@/lib/supabase'
 import Sidebar from './components/Sidebar'
 
 export default async function DashboardLayout({
@@ -14,9 +15,18 @@ export default async function DashboardLayout({
 
   if (!session) redirect('/login')
 
+  const supabase = createServerClient()
+  const { data: userData } = await supabase
+    .from('users')
+    .select('widget_installed')
+    .eq('id', session.userId)
+    .maybeSingle()
+
+  const widgetInstalled = userData?.widget_installed ?? false
+
   return (
-    <div className="flex h-screen overflow-hidden bg-[#09090B]">
-      <Sidebar userEmail={session.email} />
+    <div className="flex h-screen overflow-hidden bg-[#f9fafb]">
+      <Sidebar userEmail={session.email} widgetInstalled={widgetInstalled} />
       <main className="flex-1 overflow-auto">
         <div className="p-8">{children}</div>
       </main>

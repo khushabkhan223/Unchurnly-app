@@ -1,0 +1,2 @@
+ALTER TABLE public.users
+  ADD COLUMN IF NOT EXISTS widget_installed BOOLEAN DEFAULT false NOT NULL;

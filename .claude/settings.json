@@ -1,11 +1,21 @@
 {
   "hooks": {
-    "PreToolUse": [{
-      "matcher": "Write|Edit|MultiEdit",
-      "hooks": [{
-        "type": "command",
-        "command": "echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'sk_live_[a-zA-Z0-9]+|sk_test_[a-zA-Z0-9]+|whsec_[a-zA-Z0-9]+' && exit 2 || exit 0"
-      }]
-    }]
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'sk_live_[a-zA-Z0-9]+|sk_test_[a-zA-Z0-9]+|whsec_[a-zA-Z0-9]+' && exit 2 || exit 0"
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "security-guidance@claude-plugins-official": true,
+    "ui-ux-pro-max@ui-ux-pro-max-skill": true
   }
 }
