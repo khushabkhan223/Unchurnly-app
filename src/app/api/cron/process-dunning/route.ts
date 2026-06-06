@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { type SupabaseClient } from '@supabase/supabase-js'
 import { createServerClient } from '@/lib/supabase'
-import { sendDunningEmail } from '@/lib/email'
+import { generateAndSendDunning } from '@/lib/dunning-ai'
 import { signCardUpdateToken } from '@/lib/session'
 import { logger } from '@/lib/logger'
 
@@ -9,6 +9,7 @@ type MonitoredCustomerData = {
   customer_email: string | null
   customer_name: string | null
   plan_name: string | null
+  mrr_amount: number | null
   stripe_customer_id: string
 }
 
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
       user_id,
       monitored_customer_id,
       started_at,
-      monitored_customers ( customer_email, customer_name, plan_name, stripe_customer_id ),
+      monitored_customers ( customer_email, customer_name, plan_name, mrr_amount, stripe_customer_id ),
       dunning_emails ( id, day_number, status )
     `)
     .eq('status', 'active')
@@ -64,7 +65,7 @@ export async function GET(request: Request) {
     )
 
     const dueEmails = (sequence.dunning_emails ?? []).filter(
-      (e) => e.day_number <= daysSinceStart && e.status === 'pending'
+      (e) => e.day_number <= daysSinceStart + 1 && e.status === 'pending'
     )
 
     for (const email of dueEmails) {
@@ -87,31 +88,25 @@ export async function GET(request: Request) {
         )
         const cardUpdateUrl = `${appUrl}/card-update?token=${token}`
 
-        const result = await sendDunningEmail({
-          to: customer.customer_email,
-          customerName: customer.customer_name ?? 'there',
-          productName: customer.plan_name ?? 'your subscription',
-          cardUpdateUrl,
-          dayNumber: email.day_number as 1 | 3 | 7 | 14,
-        })
+        const attemptByDay: Record<number, number> = { 1: 1, 3: 2, 7: 3, 14: 4 }
+        const attemptCount = attemptByDay[email.day_number] ?? 1
+        const planName = customer.plan_name ?? 'your subscription'
+        const amountDue = customer.mrr_amount ?? 0
 
-        if (result.success) {
-          await supabase
-            .from('dunning_emails')
-            .update({ status: 'sent', sent_at: new Date().toISOString() })
-            .eq('id', email.id)
-          stats.sent++
-        } else {
-          await supabase
-            .from('dunning_emails')
-            .update({ status: 'failed' })
-            .eq('id', email.id)
-          logger.error('Dunning email send failed', {
-            reason: result.error,
-            day: email.day_number,
-          })
-          stats.failed++
-        }
+        await generateAndSendDunning(
+          sequence.user_id,
+          planName,
+          amountDue,
+          attemptCount,
+          customer.customer_email,
+          cardUpdateUrl
+        )
+
+        await supabase
+          .from('dunning_emails')
+          .update({ status: 'sent', sent_at: new Date().toISOString() })
+          .eq('id', email.id)
+        stats.sent++
       } catch (err) {
         logger.error('Error processing dunning email', {
           reason: err instanceof Error ? err.message : 'unknown',

@@ -4,6 +4,7 @@ import { decryptToken } from '@/lib/crypto'
 import { createServerClient } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
 import { generateAndSendDunning } from '@/lib/dunning-ai'
+import { signCardUpdateToken } from '@/lib/session'
 
 type StripeConnectionRow = {
   encrypted_webhook_secret: string | null
@@ -257,13 +258,21 @@ async function handleInvoicePaymentFailed(
     const planName = invoice.lines.data[0]?.description ?? 'your subscription'
     const amountDue = invoice.amount_due
     const attemptCount = invoice.attempt_count ?? 1
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
     try {
-      await generateAndSendDunning(uid, planName, amountDue, attemptCount, customerEmail)
+      const token = await signCardUpdateToken(customerId, uid)
+      const cardUpdateUrl = `${appUrl}/card-update?token=${token}`
+      await generateAndSendDunning(uid, planName, amountDue, attemptCount, customerEmail, cardUpdateUrl)
     } catch (err) {
       logger.error('generateAndSendDunning failed', {
         reason: err instanceof Error ? err.message : 'unknown',
       })
     }
+    await supabase
+      .from('dunning_emails')
+      .update({ status: 'sent', sent_at: new Date().toISOString() })
+      .eq('dunning_sequence_id', sequenceId)
+      .eq('day_number', 1)
   }
 }
 

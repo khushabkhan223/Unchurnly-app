@@ -64,7 +64,8 @@ export async function generateAndSendDunning(
   planName: string,
   amountDue: number,
   attemptCount: number,
-  customerEmail: string
+  customerEmail: string,
+  cardUpdateUrl?: string
 ): Promise<{ subject: string; body: string } | null> {
   const supabase = createServerClient()
   const { data: userRow } = await supabase
@@ -145,13 +146,17 @@ Return a JSON object with exactly: "subject" (string) and "body" (string).`
       throw new Error('Gemini response missing required fields')
     }
 
+    const ctaHtml = cardUpdateUrl
+      ? `\n<div style="margin:24px 0">\n  <a href="${cardUpdateUrl}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px">Update Payment Method</a>\n</div>`
+      : ''
+
     const resend = new Resend(process.env.RESEND_API_KEY)
     const { error } = await resend.emails.send({
       from: `${companyName} <billing@unchurnly.com>`,
       ...(supportEmail ? { replyTo: supportEmail } : {}),
       to: customerEmail,
       subject: parsed.subject,
-      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#111827">\n${bodyToHtml(parsed.body)}\n</div>`,
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#111827">\n${bodyToHtml(parsed.body)}${ctaHtml}\n</div>`,
     })
 
     if (error) {
