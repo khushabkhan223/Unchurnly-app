@@ -354,8 +354,8 @@ export default function OnboardingPage() {
                   <p className="font-medium text-slate-700">How to create a restricted key:</p>
                   <p>Stripe Dashboard → Developers → API Keys → Create restricted key</p>
                   <p className="text-slate-400 text-xs">
-                    Permissions: Customers (read), Subscriptions (read), Invoices (read), Webhook
-                    endpoints (write)
+                    Permissions: Customers (read), Subscriptions (write), Invoices (read), Webhook
+                    endpoints (write), Coupons (write)
                   </p>
                 </div>
 

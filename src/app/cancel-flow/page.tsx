@@ -3,6 +3,7 @@ import { verifyHmac } from '@/lib/hmac'
 import { decryptToken } from '@/lib/crypto'
 import { createServerClient } from '@/lib/supabase'
 import CancelFlowModal from './CancelFlowModal'
+import ModalError from './ModalError'
 
 type Props = {
   searchParams: Promise<{ key?: string; customerId?: string; authHash?: string }>
@@ -10,6 +11,7 @@ type Props = {
 
 type AppKeyRow = { user_id: string; encrypted_app_secret: string }
 type ConnectionRow = { encrypted_access_token: string }
+type HmacConfigRow = { require_hmac: boolean }
 type ConfigRow = {
   pause_enabled: boolean
   discount_enabled: boolean
@@ -30,7 +32,7 @@ export default async function CancelFlowPage({ searchParams }: Props) {
   const params = await searchParams
   const { key, customerId, authHash } = params
 
-  if (!key || !customerId || !authHash) {
+  if (!key || !customerId) {
     return <ModalError message="Invalid request." />
   }
 
@@ -49,8 +51,18 @@ export default async function CancelFlowPage({ searchParams }: Props) {
   const keyRow = keyData as AppKeyRow
   const appSecret = decryptToken(keyRow.encrypted_app_secret)
 
-  if (!verifyHmac(customerId, authHash, appSecret)) {
-    return <ModalError message="Unauthorized." />
+  const { data: hmacConfigData } = await supabase
+    .from('cancel_flow_configs')
+    .select('require_hmac')
+    .eq('user_id', keyRow.user_id)
+    .maybeSingle()
+
+  const requireHmac = (hmacConfigData as HmacConfigRow | null)?.require_hmac ?? false
+
+  if (requireHmac) {
+    if (!authHash || !verifyHmac(customerId, authHash, appSecret)) {
+      return <ModalError message="Unauthorized." />
+    }
   }
 
   const { data: connectionData } = await supabase
@@ -79,15 +91,14 @@ export default async function CancelFlowPage({ searchParams }: Props) {
     }
     customerName = customer.name ?? customer.email ?? 'there'
 
-    const subs = await founderStripe.subscriptions.list({
-      customer: customerId,
-      status: 'active',
-      limit: 1,
-    })
+    const [activeSubs, trialingSubs] = await Promise.all([
+      founderStripe.subscriptions.list({ customer: customerId, status: 'active', limit: 1 }),
+      founderStripe.subscriptions.list({ customer: customerId, status: 'trialing', limit: 1 }),
+    ])
 
-    const sub = subs.data[0]
+    const sub = activeSubs.data[0] ?? trialingSubs.data[0]
     if (!sub) {
-      return <ModalError message="No active subscription found." />
+      return <ModalError message="Your subscription could not be found. Please contact support." />
     }
 
     subscriptionId = sub.id
@@ -111,7 +122,7 @@ export default async function CancelFlowPage({ searchParams }: Props) {
     <CancelFlowModal
       appKey={key}
       customerId={customerId}
-      authHash={authHash}
+      authHash={authHash ?? ''}
       subscriptionId={subscriptionId}
       customerName={customerName}
       planName={planName}
@@ -119,38 +130,5 @@ export default async function CancelFlowPage({ searchParams }: Props) {
       currency={currency}
       config={config}
     />
-  )
-}
-
-function ModalError({ message }: { message: string }) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        padding: '24px',
-        fontFamily: 'sans-serif',
-        textAlign: 'center',
-        gap: '12px',
-      }}
-    >
-      <p style={{ color: '#6b7280', margin: 0 }}>{message}</p>
-      <button
-        onClick={() => window.parent.postMessage('unchurnly:close', '*')}
-        style={{
-          background: 'none',
-          border: '1px solid #e5e7eb',
-          borderRadius: '6px',
-          padding: '6px 16px',
-          cursor: 'pointer',
-          color: '#374151',
-        }}
-      >
-        Close
-      </button>
-    </div>
   )
 }

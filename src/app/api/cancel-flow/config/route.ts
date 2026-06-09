@@ -12,6 +12,7 @@ const DEFAULTS = {
   downgrade_enabled: false,
   stripe_coupon_id: null,
   support_url: null,
+  require_hmac: false,
 }
 
 type ConfigRow = {
@@ -21,6 +22,7 @@ type ConfigRow = {
   downgrade_enabled: boolean
   stripe_coupon_id: string | null
   support_url: string | null
+  require_hmac: boolean
 }
 
 type ConnectionRow = { encrypted_access_token: string }
@@ -40,7 +42,7 @@ export async function GET() {
   const supabase = createServerClient()
   const { data } = await supabase
     .from('cancel_flow_configs')
-    .select('pause_enabled, discount_enabled, discount_percent, downgrade_enabled, stripe_coupon_id, support_url')
+    .select('pause_enabled, discount_enabled, discount_percent, downgrade_enabled, stripe_coupon_id, support_url, require_hmac')
     .eq('user_id', session.userId)
     .maybeSingle()
 
@@ -60,7 +62,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
-  const { pause_enabled, discount_enabled, discount_percent, downgrade_enabled, support_url } =
+  const { pause_enabled, discount_enabled, discount_percent, downgrade_enabled, support_url, require_hmac } =
     body !== null && typeof body === 'object'
       ? (body as Record<string, unknown>)
       : {}
@@ -107,6 +109,7 @@ export async function POST(request: Request) {
       downgrade_enabled: Boolean(downgrade_enabled),
       stripe_coupon_id: stripeCouponId,
       support_url: typeof support_url === 'string' ? support_url || null : null,
+      require_hmac: Boolean(require_hmac),
     },
     { onConflict: 'user_id' }
   )

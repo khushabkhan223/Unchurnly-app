@@ -13,6 +13,26 @@ type IdRow = { id: string }
 const VALID_ACTIONS = ['pause', 'discount', 'cancel'] as const
 type Action = (typeof VALID_ACTIONS)[number]
 
+const RATE_LIMIT_WINDOW_MS = 60_000
+const RATE_LIMIT_MAX = 20
+type RateLimitEntry = { count: number; windowStart: number }
+const rateLimitMap = new Map<string, RateLimitEntry>()
+
+function checkRateLimit(key: string): boolean {
+  const now = Date.now()
+  for (const [k, entry] of rateLimitMap) {
+    if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS) rateLimitMap.delete(k)
+  }
+  const entry = rateLimitMap.get(key)
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+    rateLimitMap.set(key, { count: 1, windowStart: now })
+    return true
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false
+  entry.count++
+  return true
+}
+
 export async function POST(request: Request) {
   let body: unknown
   try {
@@ -29,11 +49,14 @@ export async function POST(request: Request) {
   if (
     typeof appKey !== 'string' || !appKey ||
     typeof customerId !== 'string' || !customerId ||
-    typeof authHash !== 'string' || !authHash ||
     typeof subscriptionId !== 'string' || !subscriptionId ||
     typeof action !== 'string' || !VALID_ACTIONS.includes(action as Action)
   ) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+  }
+
+  if (!checkRateLimit(appKey)) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
   }
 
   const supabase = createServerClient()
@@ -52,8 +75,18 @@ export async function POST(request: Request) {
   const userId = keyRow.user_id
   const appSecret = decryptToken(keyRow.encrypted_app_secret)
 
-  if (!verifyHmac(customerId, authHash, appSecret)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { data: hmacConfigData } = await supabase
+    .from('cancel_flow_configs')
+    .select('require_hmac')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  const requireHmac = (hmacConfigData as { require_hmac: boolean } | null)?.require_hmac ?? false
+
+  if (requireHmac) {
+    if (typeof authHash !== 'string' || !authHash || !verifyHmac(customerId, authHash, appSecret)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
   }
 
   const { data: connectionData } = await supabase
