@@ -1,0 +1,199 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-10T00:00:00.000Z",
+  "title": "Design System: Unchurnly",
+  "extensions": {
+    "colorMeta": {
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Deep Space",
+        "canonical": "oklch(0.09 0.018 260)",
+        "tonalRamp": ["oklch(0.05 0.01 260)", "oklch(0.09 0.018 260)", "oklch(0.14 0.022 260)", "oklch(0.20 0.025 255)", "oklch(0.30 0.025 255)", "oklch(0.45 0.02 255)", "oklch(0.62 0.015 255)", "oklch(0.82 0.008 255)"]
+      },
+      "sidebar-bg": {
+        "role": "neutral",
+        "displayName": "Navy Vault",
+        "canonical": "oklch(0.12 0.025 255)",
+        "tonalRamp": ["oklch(0.07 0.015 255)", "oklch(0.12 0.025 255)", "oklch(0.17 0.030 255)", "oklch(0.24 0.028 255)", "oklch(0.34 0.025 255)", "oklch(0.48 0.020 255)", "oklch(0.64 0.015 255)", "oklch(0.82 0.008 255)"]
+      },
+      "card-bg": {
+        "role": "neutral",
+        "displayName": "Card Slate",
+        "canonical": "oklch(0.14 0.030 255)",
+        "tonalRamp": ["oklch(0.09 0.018 255)", "oklch(0.14 0.030 255)", "oklch(0.20 0.030 255)", "oklch(0.27 0.028 255)", "oklch(0.37 0.025 255)", "oklch(0.50 0.020 255)", "oklch(0.66 0.015 255)", "oklch(0.84 0.008 255)"]
+      },
+      "accent-recovery": {
+        "role": "primary",
+        "displayName": "Emerald Signal",
+        "canonical": "oklch(0.70 0.180 162)",
+        "tonalRamp": ["oklch(0.25 0.08 162)", "oklch(0.35 0.11 162)", "oklch(0.45 0.14 162)", "oklch(0.55 0.16 162)", "oklch(0.63 0.18 162)", "oklch(0.70 0.18 162)", "oklch(0.80 0.12 162)", "oklch(0.91 0.06 162)"]
+      },
+      "accent-metric": {
+        "role": "secondary",
+        "displayName": "Horizon Blue",
+        "canonical": "oklch(0.62 0.210 264)",
+        "tonalRamp": ["oklch(0.25 0.10 264)", "oklch(0.35 0.14 264)", "oklch(0.45 0.17 264)", "oklch(0.55 0.19 264)", "oklch(0.62 0.21 264)", "oklch(0.70 0.18 264)", "oklch(0.80 0.12 264)", "oklch(0.91 0.06 264)"]
+      },
+      "signal-risk": {
+        "role": "tertiary",
+        "displayName": "Amber Risk",
+        "canonical": "oklch(0.77 0.170 67)",
+        "tonalRamp": ["oklch(0.30 0.09 67)", "oklch(0.40 0.12 67)", "oklch(0.50 0.14 67)", "oklch(0.60 0.16 67)", "oklch(0.70 0.17 67)", "oklch(0.77 0.17 67)", "oklch(0.85 0.12 67)", "oklch(0.93 0.06 67)"]
+      },
+      "signal-loss": {
+        "role": "tertiary",
+        "displayName": "Danger Red",
+        "canonical": "oklch(0.63 0.220 27)",
+        "tonalRamp": ["oklch(0.28 0.10 27)", "oklch(0.37 0.14 27)", "oklch(0.47 0.18 27)", "oklch(0.55 0.21 27)", "oklch(0.63 0.22 27)", "oklch(0.70 0.19 27)", "oklch(0.80 0.12 27)", "oklch(0.91 0.06 27)"]
+      },
+      "ink-primary": {
+        "role": "neutral",
+        "displayName": "Ink Primary",
+        "canonical": "oklch(0.96 0.004 255)",
+        "tonalRamp": ["oklch(0.30 0.015 255)", "oklch(0.42 0.012 255)", "oklch(0.52 0.010 255)", "oklch(0.62 0.008 255)", "oklch(0.72 0.007 255)", "oklch(0.82 0.006 255)", "oklch(0.90 0.005 255)", "oklch(0.96 0.004 255)"]
+      },
+      "ink-secondary": {
+        "role": "neutral",
+        "displayName": "Ink Secondary",
+        "canonical": "oklch(0.66 0.025 247)",
+        "tonalRamp": ["oklch(0.25 0.020 247)", "oklch(0.35 0.022 247)", "oklch(0.45 0.023 247)", "oklch(0.55 0.024 247)", "oklch(0.66 0.025 247)", "oklch(0.75 0.020 247)", "oklch(0.84 0.014 247)", "oklch(0.93 0.008 247)"]
+      },
+      "ink-tertiary": {
+        "role": "neutral",
+        "displayName": "Ink Tertiary",
+        "canonical": "oklch(0.38 0.030 247)",
+        "tonalRamp": ["oklch(0.18 0.015 247)", "oklch(0.25 0.020 247)", "oklch(0.32 0.025 247)", "oklch(0.38 0.030 247)", "oklch(0.48 0.028 247)", "oklch(0.58 0.025 247)", "oklch(0.70 0.020 247)", "oklch(0.84 0.012 247)"]
+      }
+    },
+    "typographyMeta": {
+      "display":  { "displayName": "Display",  "purpose": "Page-level titles. Used once per page. 'Analytics', 'Settings'." },
+      "headline": { "displayName": "Headline", "purpose": "Section headings within cards. 'Recovery Activity', 'Recent Activity'." },
+      "kpi":      { "displayName": "KPI Value","purpose": "Financial values only. Dollar amounts, percentages, multipliers. Color varies by semantic role." },
+      "body":     { "displayName": "Body",     "purpose": "Descriptive text, banner copy, empty states. Max 65ch." },
+      "label":    { "displayName": "Label",    "purpose": "Card category labels, table column headers, nav section dividers. Always uppercase." },
+      "caption":  { "displayName": "Caption",  "purpose": "Dates, axis ticks, secondary table data. Floor: 11px." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "status-pulse", "value": "animate-pulse (Tailwind)", "purpose": "Defense Status Bar dot only. The single rest-state animation in the product." },
+      { "name": "state-transition", "value": "transition-colors 150ms ease-out", "purpose": "Hover/focus state changes on interactive elements." }
+    ],
+    "breakpoints": [
+      { "name": "lg", "value": "1024px", "purpose": "KPI grid: 2-col → 4-col. Chart+AtRisk: stacked → 3-col grid." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "One primary action per screen. Emerald fill is earned by rarity.",
+      "html": "<button class=\"ds-btn-primary\">Connect Stripe</button>",
+      "css": ".ds-btn-primary { background: #10B981; color: #ffffff; padding: 10px 20px; border-radius: 8px; border: none; font-family: Inter, system-ui, sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 150ms ease-out; } .ds-btn-primary:hover { background: oklch(0.60 0.17 162); } .ds-btn-primary:focus-visible { outline: 2px solid #10B981; outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary actions and inline CTAs. Steps back visually.",
+      "html": "<button class=\"ds-btn-ghost\">View all →</button>",
+      "css": ".ds-btn-ghost { background: transparent; color: #94A3B8; padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); font-family: Inter, system-ui, sans-serif; font-size: 14px; font-weight: 400; cursor: pointer; transition: background 150ms ease-out, color 150ms ease-out; } .ds-btn-ghost:hover { background: rgba(255,255,255,0.04); color: #F1F5F9; } .ds-btn-ghost:focus-visible { outline: 2px solid #3B82F6; outline-offset: 2px; }"
+    },
+    {
+      "name": "KPI Card",
+      "kind": "card",
+      "refersTo": "kpi-card",
+      "description": "Four-up financial metric card. Label above, mono value, subtext below. No icons.",
+      "html": "<div class=\"ds-kpi-card\"><p class=\"ds-kpi-label\">MRR PROTECTED</p><p class=\"ds-kpi-value\" style=\"color:#10B981\">$1,240</p><p class=\"ds-kpi-sub\">recovered this month</p></div>",
+      "css": ".ds-kpi-card { background: #1A2035; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; } .ds-kpi-label { font-family: Inter, system-ui, sans-serif; font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: #475569; margin: 0 0 12px; } .ds-kpi-value { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 36px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; margin: 0 0 8px; } .ds-kpi-sub { font-family: Inter, system-ui, sans-serif; font-size: 12px; color: #475569; margin: 0; }"
+    },
+    {
+      "name": "Recovery Badge",
+      "kind": "chip",
+      "refersTo": "badge-recovery",
+      "description": "Paused / Discounted / Recovered outcomes. Emerald translucent pill.",
+      "html": "<span class=\"ds-badge-recovery\">Recovered</span>",
+      "css": ".ds-badge-recovery { display: inline-flex; align-items: center; background: rgba(16,185,129,0.10); color: #10B981; border: 1px solid rgba(16,185,129,0.20); border-radius: 9999px; padding: 2px 8px; font-family: Inter, system-ui, sans-serif; font-size: 12px; font-weight: 500; line-height: 1.4; white-space: nowrap; }"
+    },
+    {
+      "name": "Risk Badge",
+      "kind": "chip",
+      "refersTo": "badge-risk",
+      "description": "Active dunning / Cancellation type. Amber translucent pill.",
+      "html": "<span class=\"ds-badge-risk\">Cancellation</span>",
+      "css": ".ds-badge-risk { display: inline-flex; align-items: center; background: rgba(245,158,11,0.10); color: #F59E0B; border: 1px solid rgba(245,158,11,0.20); border-radius: 9999px; padding: 2px 8px; font-family: Inter, system-ui, sans-serif; font-size: 12px; font-weight: 500; line-height: 1.4; white-space: nowrap; }"
+    },
+    {
+      "name": "Loss Badge",
+      "kind": "chip",
+      "refersTo": "badge-loss",
+      "description": "Cancelled / Failed outcomes. Red translucent pill.",
+      "html": "<span class=\"ds-badge-loss\">Cancelled</span>",
+      "css": ".ds-badge-loss { display: inline-flex; align-items: center; background: rgba(239,68,68,0.10); color: #EF4444; border: 1px solid rgba(239,68,68,0.20); border-radius: 9999px; padding: 2px 8px; font-family: Inter, system-ui, sans-serif; font-size: 12px; font-weight: 500; line-height: 1.4; white-space: nowrap; }"
+    },
+    {
+      "name": "Metric Badge",
+      "kind": "chip",
+      "refersTo": "badge-metric",
+      "description": "Dunning type / neutral metrics. Blue translucent pill.",
+      "html": "<span class=\"ds-badge-metric\">Dunning</span>",
+      "css": ".ds-badge-metric { display: inline-flex; align-items: center; background: rgba(59,130,246,0.10); color: #3B82F6; border: 1px solid rgba(59,130,246,0.20); border-radius: 9999px; padding: 2px 8px; font-family: Inter, system-ui, sans-serif; font-size: 12px; font-weight: 500; line-height: 1.4; white-space: nowrap; }"
+    },
+    {
+      "name": "Nav Item (Active)",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Current page indicator in sidebar.",
+      "html": "<a class=\"ds-nav-active\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\"/></svg>Analytics</a>",
+      "css": ".ds-nav-active { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 8px; background: rgba(255,255,255,0.08); color: #F1F5F9; font-family: Inter, system-ui, sans-serif; font-size: 14px; font-weight: 500; text-decoration: none; cursor: pointer; }"
+    },
+    {
+      "name": "Defense Status Bar",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Signature element. Top strip on every dashboard page. Pulsing dot = system is alive.",
+      "html": "<div class=\"ds-status-bar\"><div class=\"ds-status-left\"><span class=\"ds-status-dot\"></span>Revenue protection active · Monitoring 4 recovery sequences</div><span class=\"ds-status-time\">Last updated just now</span></div>",
+      "css": ".ds-status-bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); } .ds-status-left { display: flex; align-items: center; gap: 8px; font-family: Inter, system-ui, sans-serif; font-size: 14px; color: #94A3B8; } .ds-status-dot { width: 8px; height: 8px; border-radius: 50%; background: #10B981; flex-shrink: 0; animation: pulse 2s cubic-bezier(0.4,0,0.6,1) infinite; } @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } } @media (prefers-reduced-motion: reduce) { .ds-status-dot { animation: none; } } .ds-status-time { font-family: Inter, system-ui, sans-serif; font-size: 11px; color: #475569; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Silent Guardian",
+    "overview": "Unchurnly's visual system is built around a single idea: the product is working right now, whether the founder is watching or not. The dashboard is a status report from something that never sleeps. Every surface should communicate stability and control — not urgency, not celebration, not alarm.\n\nThe palette is deliberately dark and instrument-like. Three depth layers (canvas, sidebar, card) create a quiet spatial hierarchy without any shadows. Color is rationed: only four semantic signals (emerald = recovered, blue = neutral metrics, amber = at risk, red = loss) appear against a near-colorless ground. Nothing is used for decoration.\n\nTypography reinforces the register: Inter for all interface text at a tight scale, JetBrains Mono reserved exclusively for financial values. The mono numbers carry physical weight — they read like accounting, not dashboards.",
+    "keyCharacteristics": [
+      "Three-layer tonal depth: #0F1117 → #161B27 → #1A2035 (no shadows)",
+      "Four semantic colors only; never decorative",
+      "JetBrains Mono on all financial values; Inter on all UI text",
+      "Uppercase tracking-widest labels as the only typographic hierarchy marker",
+      "Full-width layout; no max-width cap on the dashboard canvas",
+      "The pulsing emerald dot (Defense Status Bar) is the only motion at rest"
+    ],
+    "rules": [
+      { "name": "The Semantic Seal Rule", "body": "Emerald, amber, and red are never used outside their semantic roles. No emerald hover states. No amber decorative accents. No red in illustrations.", "section": "colors" },
+      { "name": "The Layering Rule", "body": "Depth is created through three discrete background values (#0F1117, #161B27, #1A2035), never through shadows or gradients.", "section": "colors" },
+      { "name": "The Mono Gate Rule", "body": "JetBrains Mono is used on financial values and code snippets only. Navigation, button labels, table text, and body copy always use Inter.", "section": "typography" },
+      { "name": "The Scale Ceiling Rule", "body": "No UI text exceeds 18px. KPI values at 36px are the sole exception and are visually separated by weight, family, and color contrast.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Shadows are prohibited on cards, panels, sidebars, and tables. The recharts tooltip is the one documented exception.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use Emerald Signal (#10B981) exclusively for recovered/saved outcomes and the primary action button.",
+      "Do render all financial figures in JetBrains Mono.",
+      "Do use uppercase + tracking-widest (0.08em) for all card category labels only.",
+      "Do express all depth through tonal surface steps. Add white/5 borders to cards.",
+      "Do keep all semantic chip colors consistent: translucent fill + matching solid border.",
+      "Do keep the Defense Status Bar on every authenticated dashboard page.",
+      "Do keep the emerald pulsing dot as the only rest-state animation."
+    ],
+    "donts": [
+      "Don't use Emerald Signal, Amber Risk, or Danger Red decoratively.",
+      "Don't use box shadows on card surfaces, sidebars, or panels.",
+      "Don't use gradient backgrounds. Flat fills only.",
+      "Don't put colored icon circles on KPI cards.",
+      "Don't use JetBrains Mono for navigation, button labels, banners, or headings.",
+      "Don't let the chart be the visual hero. KPI values are the primary hierarchy.",
+      "Don't use the Intercom/HubSpot aesthetic: no color blocks as decoration, no celebratory copy.",
+      "Don't drop below 11px for any visible text.",
+      "Don't use more than one primary (emerald) button per screen.",
+      "Don't nest cards inside cards."
+    ]
+  }
+}

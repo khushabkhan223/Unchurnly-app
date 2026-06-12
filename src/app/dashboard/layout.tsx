@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { verifySessionToken } from '@/lib/session'
 import { createServerClient } from '@/lib/supabase'
 import Sidebar from './components/Sidebar'
+import { DashboardHeader } from './components/DashboardHeader'
 
 export default async function DashboardLayout({
   children,
@@ -25,10 +26,11 @@ export default async function DashboardLayout({
   const widgetInstalled = userData?.widget_installed ?? false
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f9fafb]">
+    <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar userEmail={session.email} widgetInstalled={widgetInstalled} />
-      <main className="flex-1 overflow-auto">
-        <div className="p-8">{children}</div>
+      <main className="flex-1 flex flex-col min-h-0">
+        <DashboardHeader />
+        <div className="flex-1 overflow-auto px-6 py-8">{children}</div>
       </main>
     </div>
   )

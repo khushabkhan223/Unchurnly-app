@@ -72,6 +72,16 @@ export async function POST(request: Request) {
   }
 
   const supabase = createServerClient()
+
+  const { data: existingConfig } = await supabase
+    .from('cancel_flow_configs')
+    .select('require_hmac')
+    .eq('user_id', session.userId)
+    .maybeSingle()
+
+  const existingRequireHmac =
+    (existingConfig as { require_hmac: boolean } | null)?.require_hmac ?? false
+
   let stripeCouponId: string | null = null
 
   if (discount_enabled) {
@@ -109,7 +119,7 @@ export async function POST(request: Request) {
       downgrade_enabled: Boolean(downgrade_enabled),
       stripe_coupon_id: stripeCouponId,
       support_url: typeof support_url === 'string' ? support_url || null : null,
-      require_hmac: Boolean(require_hmac),
+      require_hmac: typeof require_hmac === 'boolean' ? require_hmac : existingRequireHmac,
     },
     { onConflict: 'user_id' }
   )

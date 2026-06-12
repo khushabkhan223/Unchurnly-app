@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Widget Test</title>
+  <script src="http://localhost:3000/api/widget?key=unchurnly_live_45f908ee720ebd6a3eaf8d389257b1f6" async></script>
+</head>
+<body style="font-family: sans-serif; padding: 40px;">
+  <h1>Test App — Billing Page</h1>
+  <p>You are subscribed to Content Creation AI — $19/month</p>
+  <button onclick="cancelSubscription()" style="background:red; color:white; padding:12px 24px; border:none; border-radius:6px; cursor:pointer; font-size:16px;">
+    Cancel Subscription
+  </button>
+
+  <script>
+    function cancelSubscription() {
+  window.unchurnly.init('show', {
+    customerId: 'cus_UejOoRoAq6Tyff'
+    // no authHash
+  });
+}
+  </script>
+</body>
+</html>

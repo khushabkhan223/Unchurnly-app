@@ -9,11 +9,11 @@ import {
   Mail,
   Settings,
   LogOut,
-  ChevronDown,
   Code2,
   BookOpen,
-  MessageCircle,
+  LifeBuoy,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 type NavItemProps = {
   href: string
@@ -28,16 +28,21 @@ function NavItem({ href, icon: Icon, label, subtitle, active, badge }: NavItemPr
   return (
     <Link
       href={href}
-      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-        active ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-600 hover:bg-slate-50'
-      }`}
+      className={cn(
+        'flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors',
+        active
+          ? 'bg-sidebar-accent text-foreground'
+          : 'text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-foreground',
+      )}
     >
-      <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-blue-600' : 'text-slate-400'}`} />
-      <div className="min-w-0 flex-1">
-        <span className="block">{label}</span>
-        {subtitle && <span className="block text-xs text-slate-400 leading-tight">{subtitle}</span>}
+      <Icon className="h-3.5 w-3.5 shrink-0" />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <span className="text-sm font-medium leading-tight">{label}</span>
+        {subtitle && (
+          <span className="text-xs leading-tight text-muted-foreground/70">{subtitle}</span>
+        )}
       </div>
-      {badge && <span className="w-2 h-2 rounded-full bg-orange-400 shrink-0" />}
+      {badge && <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />}
     </Link>
   )
 }
@@ -52,8 +57,6 @@ export default function Sidebar({
   const pathname = usePathname()
   const router = useRouter()
 
-  const domain = userEmail.includes('@') ? userEmail.split('@')[1] : userEmail
-
   function isActive(href: string, exact: boolean) {
     return exact ? pathname === href : pathname.startsWith(href)
   }
@@ -64,129 +67,107 @@ export default function Sidebar({
   }
 
   return (
-    <aside
-      className="flex flex-col h-full bg-white border-r border-slate-200 px-4 py-6 shrink-0"
-      style={{ width: 260 }}
-    >
-      {/* Workspace header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-6 h-6 rounded bg-blue-600 flex items-center justify-center shrink-0">
-            <span className="text-white text-xs font-bold">U</span>
-          </div>
-          <span className="text-slate-900 font-semibold text-sm">Unchurnly</span>
+    <aside className="flex h-full w-[250px] shrink-0 flex-col border-r border-border bg-sidebar">
+      {/* Logo */}
+      <div className="flex items-center gap-2.5 border-b border-border px-4 py-4">
+        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-foreground text-xs font-bold text-background">
+          U
         </div>
-        <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 border border-slate-200 text-left mt-1">
-          <div className="w-4 h-4 rounded bg-blue-100 flex items-center justify-center shrink-0">
-            <span className="text-blue-600 text-[9px] font-bold">
-              {domain[0]?.toUpperCase() ?? 'W'}
-            </span>
-          </div>
-          <span className="text-xs text-slate-600 truncate flex-1">{domain}</span>
-          <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
-        </button>
+        <span className="text-sm font-semibold text-foreground">Unchurnly</span>
       </div>
 
-      {/* Grouped navigation */}
-      <nav className="flex-1 space-y-4">
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto px-2 py-3">
         {/* Overview */}
-        <div>
-          <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
-            Overview
+        <div className="mb-4">
+          <p className="mb-1 px-2 text-[10px] font-medium tracking-widest text-muted-foreground/60">
+            OVERVIEW
           </p>
-          <div className="space-y-0.5">
-            <NavItem
-              href="/dashboard"
-              icon={BarChart3}
-              label="Analytics"
-              active={isActive('/dashboard', true)}
-            />
-            <NavItem
-              href="/dashboard/customers"
-              icon={Users}
-              label="Customers"
-              active={isActive('/dashboard/customers', false)}
-            />
-          </div>
+          <NavItem
+            href="/dashboard"
+            icon={BarChart3}
+            label="Analytics"
+            active={isActive('/dashboard', true)}
+          />
+          <NavItem
+            href="/dashboard/customers"
+            icon={Users}
+            label="Customers"
+            active={isActive('/dashboard/customers', false)}
+          />
         </div>
 
         {/* Automations */}
-        <div>
-          <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
-            Automations
+        <div className="mb-4">
+          <p className="mb-1 px-2 text-[10px] font-medium tracking-widest text-muted-foreground/60">
+            AUTOMATIONS
           </p>
-          <div className="space-y-0.5">
-            <NavItem
-              href="/dashboard/retention"
-              icon={Shield}
-              label="Cancel Flows"
-              subtitle="Offers & retention"
-              active={isActive('/dashboard/retention', false)}
-            />
-            <NavItem
-              href="/dashboard/dunning"
-              icon={Mail}
-              label="Dunning"
-              subtitle="Failed payments"
-              active={isActive('/dashboard/dunning', false)}
-            />
-          </div>
+          <NavItem
+            href="/dashboard/retention"
+            icon={Shield}
+            label="Cancel Flows"
+            subtitle="Offers & retention"
+            active={isActive('/dashboard/retention', false)}
+          />
+          <NavItem
+            href="/dashboard/dunning"
+            icon={Mail}
+            label="Dunning"
+            subtitle="Failed payments"
+            active={isActive('/dashboard/dunning', false)}
+          />
         </div>
 
         {/* Configuration */}
-        <div>
-          <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
-            Configuration
+        <div className="mb-4">
+          <p className="mb-1 px-2 text-[10px] font-medium tracking-widest text-muted-foreground/60">
+            CONFIGURATION
           </p>
-          <div className="space-y-0.5">
-            <NavItem
-              href="/dashboard/settings"
-              icon={Code2}
-              label="Installation"
-              active={isActive('/dashboard/settings', false)}
-              badge={!widgetInstalled}
-            />
-            <NavItem
-              href="/dashboard/settings"
-              icon={Settings}
-              label="Settings"
-              active={false}
-            />
-          </div>
+          <NavItem
+            href="/dashboard/settings"
+            icon={Code2}
+            label="Installation"
+            active={isActive('/dashboard/settings', false)}
+            badge={!widgetInstalled}
+          />
+          <NavItem
+            href="/dashboard/settings"
+            icon={Settings}
+            label="Settings"
+            active={false}
+          />
         </div>
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-slate-100 pt-4 space-y-0.5">
+      <div className="border-t border-border px-2 py-2">
         <a
           href="#"
           target="_blank"
           rel="noreferrer"
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-500 hover:bg-slate-50 transition-colors"
+          className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
         >
-          <BookOpen className="w-4 h-4 shrink-0" />
-          Documentation
+          <BookOpen className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span>Documentation</span>
         </a>
         <a
           href="mailto:support@unchurnly.com"
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-500 hover:bg-slate-50 transition-colors"
+          className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
         >
-          <MessageCircle className="w-4 h-4 shrink-0" />
-          Support
+          <LifeBuoy className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span>Support</span>
         </a>
-        <div className="flex items-center gap-2 px-3 py-2 mt-1">
-          <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-            <span className="text-blue-600 text-xs font-semibold">
-              {userEmail[0]?.toUpperCase() ?? 'U'}
-            </span>
+        <div className="mt-1 flex items-center gap-2.5 rounded-md px-2 py-1.5">
+          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-secondary text-[10px] font-semibold text-foreground shrink-0">
+            {userEmail[0]?.toUpperCase() ?? 'U'}
           </div>
-          <span className="text-xs text-slate-600 truncate flex-1">{userEmail}</span>
+          <span className="flex-1 truncate text-xs text-muted-foreground">{userEmail}</span>
           <button
             onClick={handleLogout}
-            className="text-slate-400 hover:text-slate-600 transition-colors"
-            title="Log out"
+            aria-label="Log out"
+            className="cursor-pointer"
           >
-            <LogOut className="w-3.5 h-3.5" />
+            <LogOut className="h-3 w-3 text-muted-foreground/50" />
           </button>
         </div>
       </div>
