@@ -21,9 +21,13 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
     title: 'Dunning',
     subtitle: 'Failed payment recovery',
   },
-  '/dashboard/settings': {
+  '/dashboard/installation': {
     title: 'Installation',
     subtitle: 'Widget and integrations',
+  },
+  '/dashboard/settings': {
+    title: 'Settings',
+    subtitle: 'Your brand profile',
   },
 }
 

@@ -2,16 +2,14 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifySessionToken } from '@/lib/session'
 import { createServerClient } from '@/lib/supabase'
-import SettingsPage from '../components/SettingsPage'
+import SettingsProfile from '../components/SettingsProfile'
 
-type ConnectionRow = {
-  stripe_account_id: string | null
-  connected_at: string
-  webhook_configured_at: string | null
-  stripe_baseline_mrr: number
+type ProfileRow = {
+  company_name: string | null
+  support_email: string | null
+  business_model: string | null
+  brand_voice: string | null
 }
-
-type AppKeyRow = { app_key: string }
 
 export default async function Settings() {
   const cookieStore = await cookies()
@@ -21,26 +19,20 @@ export default async function Settings() {
 
   const supabase = createServerClient()
 
-  const [connResult, keyResult] = await Promise.all([
-    supabase
-      .from('stripe_connections')
-      .select('stripe_account_id, connected_at, webhook_configured_at, stripe_baseline_mrr')
-      .eq('user_id', session.userId)
-      .maybeSingle(),
-    supabase
-      .from('founder_app_keys')
-      .select('app_key')
-      .eq('user_id', session.userId)
-      .maybeSingle(),
-  ])
+  const { data } = await supabase
+    .from('users')
+    .select('company_name, support_email, business_model, brand_voice')
+    .eq('id', session.userId)
+    .maybeSingle()
 
-  const connection = connResult.data ? (connResult.data as ConnectionRow) : null
-  const appKey = keyResult.data ? (keyResult.data as AppKeyRow).app_key : null
+  const profile = data as ProfileRow | null
 
   return (
-    <SettingsPage
-      connection={connection}
-      appKey={appKey}
+    <SettingsProfile
+      companyName={profile?.company_name ?? null}
+      supportEmail={profile?.support_email ?? null}
+      businessModel={profile?.business_model ?? null}
+      brandVoice={profile?.brand_voice ?? null}
     />
   )
 }

@@ -19,15 +19,16 @@ export default async function DashboardLayout({
   const supabase = createServerClient()
   const { data: userData } = await supabase
     .from('users')
-    .select('widget_installed')
+    .select('widget_installed, company_name')
     .eq('id', session.userId)
     .maybeSingle()
 
   const widgetInstalled = userData?.widget_installed ?? false
+  const companyName = userData?.company_name ?? null
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar userEmail={session.email} widgetInstalled={widgetInstalled} />
+      <Sidebar userEmail={session.email} widgetInstalled={widgetInstalled} companyName={companyName} />
       <main className="flex-1 flex flex-col min-h-0">
         <DashboardHeader />
         <div className="flex-1 overflow-auto px-6 py-8">{children}</div>

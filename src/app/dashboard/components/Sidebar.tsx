@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -49,13 +50,18 @@ function NavItem({ href, icon: Icon, label, subtitle, active, badge }: NavItemPr
 
 export default function Sidebar({
   userEmail,
+  companyName,
   widgetInstalled = true,
 }: {
   userEmail: string
+  companyName?: string | null
   widgetInstalled?: boolean
 }) {
   const pathname = usePathname()
   const router = useRouter()
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+
+  const displayName = companyName || userEmail.split('@')[0]
 
   function isActive(href: string, exact: boolean) {
     return exact ? pathname === href : pathname.startsWith(href)
@@ -124,17 +130,17 @@ export default function Sidebar({
             CONFIGURATION
           </p>
           <NavItem
-            href="/dashboard/settings"
+            href="/dashboard/installation"
             icon={Code2}
             label="Installation"
-            active={isActive('/dashboard/settings', false)}
+            active={isActive('/dashboard/installation', false)}
             badge={!widgetInstalled}
           />
           <NavItem
             href="/dashboard/settings"
             icon={Settings}
             label="Settings"
-            active={false}
+            active={isActive('/dashboard/settings', false)}
           />
         </div>
       </nav>
@@ -157,18 +163,34 @@ export default function Sidebar({
           <LifeBuoy className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           <span>Support</span>
         </a>
-        <div className="mt-1 flex items-center gap-2.5 rounded-md px-2 py-1.5">
-          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-secondary text-[10px] font-semibold text-foreground shrink-0">
-            {userEmail[0]?.toUpperCase() ?? 'U'}
-          </div>
-          <span className="flex-1 truncate text-xs text-muted-foreground">{userEmail}</span>
+        <div className="relative mt-1">
           <button
-            onClick={handleLogout}
-            aria-label="Log out"
-            className="cursor-pointer"
+            onClick={() => setDropdownOpen((o) => !o)}
+            className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent"
           >
-            <LogOut className="h-3 w-3 text-muted-foreground/50" />
+            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-secondary text-[10px] font-semibold text-foreground shrink-0">
+              {(companyName || userEmail)[0]?.toUpperCase() ?? 'U'}
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-xs font-medium text-foreground">{displayName}</span>
+              <span className="truncate text-[10px] text-muted-foreground">{userEmail}</span>
+            </div>
           </button>
+
+          {dropdownOpen && (
+            <div className="absolute bottom-full left-0 mb-1 min-w-[160px] rounded-lg border border-border bg-card py-1 z-50">
+              <button
+                onClick={() => {
+                  setDropdownOpen(false)
+                  handleLogout()
+                }}
+                className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/5"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Log out
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </aside>

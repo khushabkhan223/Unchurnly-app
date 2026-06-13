@@ -2,14 +2,15 @@
 
 import { useState } from 'react'
 import { Users } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { type CustomerEvent } from '../customers/page'
 
 function outcomeBadgeClass(outcome: string) {
   if (['paused', 'discounted', 'completed'].includes(outcome))
-    return 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-  if (outcome === 'cancelled') return 'bg-rose-50 text-rose-700 border border-rose-100'
-  if (outcome === 'active') return 'bg-blue-50 text-blue-700 border border-blue-100'
-  return 'bg-slate-100 text-slate-600'
+    return 'border-emerald/30 text-emerald bg-emerald/5'
+  if (outcome === 'cancelled') return 'border-destructive/30 text-destructive bg-destructive/5'
+  if (outcome === 'active') return 'border-accent/30 text-accent bg-accent/5'
+  return 'border-border text-muted-foreground bg-card'
 }
 
 function outcomeLabel(outcome: string) {
@@ -24,6 +25,13 @@ function outcomeLabel(outcome: string) {
   return map[outcome] ?? outcome
 }
 
+function fmtDate(d: string): string {
+  const p = new Date(d)
+  return isNaN(p.getTime())
+    ? '—'
+    : p.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
 export default function CustomersTable({ events }: { events: CustomerEvent[] }) {
   const [search, setSearch] = useState('')
 
@@ -32,33 +40,28 @@ export default function CustomersTable({ events }: { events: CustomerEvent[] }) 
     : events
 
   return (
-    <div className="space-y-6 max-w-6xl">
-      {/* Page header */}
-      <div className="border-b border-slate-200 pb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Customers</h1>
-        <p className="text-sm text-slate-500 mt-1">All cancellation and dunning events</p>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <div className="px-6 py-4 border-b border-slate-100">
+    <div className="space-y-5">
+      <div className="rounded-lg border border-border bg-card overflow-hidden">
+        {/* Search bar */}
+        <div className="border-b border-border px-5 py-3.5">
           <input
             type="text"
             placeholder="Search by email…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full max-w-xs px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50"
+            className="w-full max-w-xs rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
 
         {filtered.length === 0 ? (
-          <div className="py-16 flex flex-col items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
-              <Users className="w-5 h-5 text-slate-400" />
+          <div className="flex flex-col items-center gap-2 py-16">
+            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
+              <Users className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
             </div>
-            <p className="text-slate-900 font-medium text-sm">
+            <p className="text-sm font-semibold text-foreground">
               {events.length === 0 ? 'No customer events yet' : 'No results'}
             </p>
-            <p className="text-slate-500 text-sm">
+            <p className="text-sm text-muted-foreground">
               {events.length === 0
                 ? 'Install the widget to start tracking.'
                 : 'Try a different search term.'}
@@ -66,13 +69,16 @@ export default function CustomersTable({ events }: { events: CustomerEvent[] }) 
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50">
-                <tr>
-                  {['Customer', 'Type', 'Offer shown', 'Outcome', 'MRR', 'Date'].map((h) => (
+            <table className="w-full table-fixed" aria-label="Customer events">
+              <thead>
+                <tr className="border-b border-border">
+                  {['CUSTOMER', 'TYPE', 'OFFER SHOWN', 'OUTCOME', 'MRR', 'DATE'].map((h) => (
                     <th
                       key={h}
-                      className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400"
+                      className={cn(
+                        'px-5 py-4 text-left text-[10px] font-semibold tracking-widest text-muted-foreground/60',
+                        h === 'CUSTOMER' && 'w-[280px]',
+                      )}
                     >
                       {h}
                     </th>
@@ -81,40 +87,42 @@ export default function CustomersTable({ events }: { events: CustomerEvent[] }) 
               </thead>
               <tbody>
                 {filtered.map((ev, i) => (
-                  <tr key={i} className="border-b border-slate-50 hover:bg-slate-50">
-                    <td className="px-6 py-3 text-slate-900 font-medium max-w-[180px] truncate">
-                      {ev.email}
+                  <tr
+                    key={i}
+                    className="border-b border-border/50 transition-colors last:border-0 hover:bg-secondary/40"
+                  >
+                    <td className="w-[280px] px-5 py-4">
+                      <span className="block truncate font-mono text-xs text-muted-foreground">
+                        {ev.email}
+                      </span>
                     </td>
-                    <td className="px-6 py-3">
-                      <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
-                          ev.type === 'cancellation'
-                            ? 'bg-slate-100 text-slate-600 border-slate-200'
-                            : 'bg-blue-50 text-blue-700 border-blue-100'
-                        }`}
-                      >
+                    <td className="px-5 py-4">
+                      <span className="inline-flex items-center rounded-md border border-border px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                         {ev.type === 'cancellation' ? 'Cancellation' : 'Dunning'}
                       </span>
                     </td>
-                    <td className="px-6 py-3 text-slate-500">{ev.offer}</td>
-                    <td className="px-6 py-3">
+                    <td className="px-5 py-4">
+                      <span className="text-xs text-muted-foreground">{ev.offer}</span>
+                    </td>
+                    <td className="px-5 py-4">
                       <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${outcomeBadgeClass(ev.outcome)}`}
+                        className={cn(
+                          'inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold',
+                          outcomeBadgeClass(ev.outcome),
+                        )}
                       >
                         {outcomeLabel(ev.outcome)}
                       </span>
                     </td>
-                    <td className="px-6 py-3 font-mono text-rose-600">
-                      {ev.mrr > 0
-                        ? `$${ev.mrr.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
-                        : '—'}
+                    <td className="px-5 py-4">
+                      <span className="font-mono text-xs font-semibold text-emerald">
+                        {ev.mrr > 0
+                          ? `$${ev.mrr.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+                          : '—'}
+                      </span>
                     </td>
-                    <td className="px-6 py-3 text-slate-400 text-xs">
-                      {new Date(ev.date).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
+                    <td className="px-5 py-4">
+                      <span className="text-xs text-muted-foreground">{fmtDate(ev.date)}</span>
                     </td>
                   </tr>
                 ))}

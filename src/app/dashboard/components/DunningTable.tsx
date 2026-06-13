@@ -1,6 +1,7 @@
 'use client'
 
 import { Mail } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { type DunningSequence } from '../dunning/page'
 
 const DAY_NUMBERS = [1, 3, 7, 14]
@@ -20,44 +21,41 @@ function nextEmailLabel(seq: DunningSequence): string {
 }
 
 function statusBadgeClass(status: string) {
-  if (status === 'active') return 'bg-blue-50 text-blue-700 border border-blue-100'
-  if (status === 'completed') return 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-  if (status === 'cancelled') return 'bg-rose-50 text-rose-700 border border-rose-100'
-  return 'bg-slate-100 text-slate-600'
+  if (status === 'active') return 'border-accent/30 text-accent bg-accent/5'
+  if (status === 'completed') return 'border-emerald/30 text-emerald bg-emerald/5'
+  if (status === 'cancelled') return 'border-destructive/30 text-destructive bg-destructive/5'
+  return 'border-border text-muted-foreground bg-card'
 }
 
 export default function DunningTable({ sequences }: { sequences: DunningSequence[] }) {
   return (
-    <div className="space-y-6 max-w-6xl">
-      {/* Page header */}
-      <div className="border-b border-slate-200 pb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Dunning</h1>
-        <p className="text-sm text-slate-500 mt-1">Automated email sequences for failed payments</p>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)]">
+    <div className="space-y-5">
+      <div className="rounded-lg border border-border bg-card overflow-hidden">
         {sequences.length === 0 ? (
-          <div className="py-16 flex flex-col items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
-              <Mail className="w-5 h-5 text-slate-400" />
+          <div className="flex flex-col items-center gap-2 py-16">
+            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
+              <Mail className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
             </div>
-            <p className="text-slate-900 font-medium text-sm">No dunning sequences yet</p>
-            <p className="text-slate-500 text-sm">Failed payments will appear here automatically.</p>
+            <p className="text-sm font-semibold text-foreground">No dunning sequences yet</p>
+            <p className="text-sm text-muted-foreground">Failed payments will appear here automatically.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50">
-                <tr>
-                  {['Customer', 'Status', 'MRR at Risk', 'Emails', 'Next email', 'Progress', 'Started'].map(
+            <table className="w-full table-fixed" aria-label="Dunning sequences">
+              <thead>
+                <tr className="border-b border-border">
+                  {['CUSTOMER', 'STATUS', 'MRR AT RISK', 'EMAILS', 'NEXT EMAIL', 'PROGRESS', 'STARTED'].map(
                     (h) => (
                       <th
                         key={h}
-                        className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400"
+                        className={cn(
+                          'px-5 py-4 text-left text-[10px] font-semibold tracking-widest text-muted-foreground/60',
+                          h === 'CUSTOMER' && 'w-[280px]',
+                        )}
                       >
                         {h}
                       </th>
-                    )
+                    ),
                   )}
                 </tr>
               </thead>
@@ -65,27 +63,41 @@ export default function DunningTable({ sequences }: { sequences: DunningSequence
                 {sequences.map((seq) => {
                   const sentCount = seq.dunning_emails.filter((e) => e.status === 'sent').length
                   return (
-                    <tr key={seq.id} className="border-b border-slate-50 hover:bg-slate-50">
-                      <td className="px-6 py-3 text-slate-900 font-medium max-w-[160px] truncate">
-                        {seq.email}
+                    <tr
+                      key={seq.id}
+                      className="border-b border-border/50 transition-colors last:border-0 hover:bg-secondary/40"
+                    >
+                      <td className="w-[280px] px-5 py-4">
+                        <span className="block truncate font-mono text-xs text-muted-foreground">
+                          {seq.email}
+                        </span>
                       </td>
-                      <td className="px-6 py-3">
+                      <td className="px-5 py-4">
                         <span
-                          className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${statusBadgeClass(seq.status)}`}
+                          className={cn(
+                            'inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold capitalize',
+                            statusBadgeClass(seq.status),
+                          )}
                         >
                           {seq.status}
                         </span>
                       </td>
-                      <td className="px-6 py-3 font-mono text-rose-600">
-                        {seq.mrr > 0
-                          ? `$${seq.mrr.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
-                          : '—'}
+                      <td className="px-5 py-4">
+                        <span className="font-mono text-xs font-semibold text-amber-400">
+                          {seq.mrr > 0
+                            ? `$${seq.mrr.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+                            : '—'}
+                        </span>
                       </td>
-                      <td className="px-6 py-3 text-slate-500">
-                        {sentCount} / {seq.dunning_emails.length || 4}
+                      <td className="px-5 py-4">
+                        <span className="text-xs text-muted-foreground">
+                          {sentCount} / {seq.dunning_emails.length || 4}
+                        </span>
                       </td>
-                      <td className="px-6 py-3 text-slate-500">{nextEmailLabel(seq)}</td>
-                      <td className="px-6 py-3">
+                      <td className="px-5 py-4">
+                        <span className="text-xs text-muted-foreground">{nextEmailLabel(seq)}</span>
+                      </td>
+                      <td className="px-5 py-4">
                         <div className="flex items-center gap-1.5">
                           {DAY_NUMBERS.map((day) => {
                             const email = seq.dunning_emails.find((e) => e.day_number === day)
@@ -94,24 +106,27 @@ export default function DunningTable({ sequences }: { sequences: DunningSequence
                             return (
                               <div
                                 key={day}
-                                className={`w-2.5 h-2.5 rounded-full border ${
+                                className={cn(
+                                  'h-2.5 w-2.5 rounded-full border',
                                   isSent
-                                    ? 'bg-indigo-500 border-indigo-500'
+                                    ? 'bg-emerald border-emerald'
                                     : isPending
-                                    ? 'bg-transparent border-slate-300'
-                                    : 'bg-transparent border-slate-200'
-                                }`}
+                                      ? 'border-border bg-transparent'
+                                      : 'border-border/50 bg-transparent',
+                                )}
                                 title={`Day ${day}: ${email?.status ?? 'not created'}`}
                               />
                             )
                           })}
                         </div>
                       </td>
-                      <td className="px-6 py-3 text-slate-400 text-xs">
-                        {new Date(seq.started_at).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                        })}
+                      <td className="px-5 py-4">
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(seq.started_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                        </span>
                       </td>
                     </tr>
                   )

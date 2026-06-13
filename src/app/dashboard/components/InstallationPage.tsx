@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { Copy, Check, AlertTriangle } from 'lucide-react'
 
 type Connection = {
@@ -29,14 +28,13 @@ function stripeState(connection: Connection): 'not_connected' | 'token_error' | 
   return 'connected'
 }
 
-export default function SettingsPage({
+export default function InstallationPage({
   connection,
   appKey: initialAppKey,
 }: {
   connection: Connection
   appKey: string | null
 }) {
-  const router = useRouter()
   const state = stripeState(connection)
 
   const [appKey, setAppKey] = useState(initialAppKey)
@@ -77,13 +75,8 @@ const authHash = crypto
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      // clipboard unavailable — silently ignore
+      // clipboard unavailable
     }
-  }
-
-  async function handleLogout() {
-    await fetch('/api/auth/logout', { method: 'POST' })
-    router.push('/login')
   }
 
   return (
@@ -252,19 +245,6 @@ const authHash = crypto
           >
             Configure offers →
           </Link>
-        </div>
-      </div>
-
-      {/* Account */}
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
-        <div className="px-5 py-4">
-          <h2 className="text-sm font-semibold text-foreground mb-3">Account</h2>
-          <button
-            onClick={handleLogout}
-            className="rounded-lg border border-destructive/30 px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/5"
-          >
-            Log out
-          </button>
         </div>
       </div>
     </div>
