@@ -127,6 +127,24 @@ export async function POST(request: Request) {
     monitoredCustomerId = (newCustomer as IdRow).id
   }
 
+  if (action === 'discount' || action === 'pause') {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+    const { data: recentOffer } = await supabase
+      .from('cancellation_events')
+      .select('id')
+      .eq('monitored_customer_id', monitoredCustomerId)
+      .in('outcome', ['discounted', 'paused'])
+      .gte('created_at', thirtyDaysAgo)
+      .limit(1)
+      .maybeSingle()
+    if (recentOffer) {
+      return NextResponse.json(
+        { error: 'An offer has already been applied to this account in the last 30 days.' },
+        { status: 400 },
+      )
+    }
+  }
+
   try {
     if (action === 'pause') {
       const resumesAt = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60

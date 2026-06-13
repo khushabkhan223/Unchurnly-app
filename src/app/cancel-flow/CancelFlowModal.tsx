@@ -20,6 +20,7 @@ type Props = {
   amount: number
   currency: string
   config: Config
+  hasActiveOffer: boolean
 }
 
 type Step = 'reason' | 'offer' | 'done'
@@ -48,6 +49,7 @@ export default function CancelFlowModal({
   customerName,
   planName,
   config,
+  hasActiveOffer,
 }: Props) {
   const [step, setStep] = useState<Step>('reason')
   const [offerType, setOfferType] = useState<OfferType>(null)
@@ -197,7 +199,21 @@ export default function CancelFlowModal({
 
       {step === 'offer' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {offerType === 'pause' && (
+          {hasActiveOffer && (offerType === 'pause' || offerType === 'discount') ? (
+            <>
+              <p style={{ margin: 0, color: '#6b7280', fontSize: '13px' }}>
+                A retention offer was already applied to your account recently.
+              </p>
+              <button
+                onClick={() => handleAction('cancel')}
+                disabled={isLoading}
+                style={btnDestructive}
+              >
+                {isLoading ? 'Processing…' : 'Cancel my subscription'}
+              </button>
+            </>
+          ) : null}
+          {!hasActiveOffer && offerType === 'pause' && (
             <>
               <p style={{ margin: 0, fontWeight: 600, fontSize: '17px', color: '#111827' }}>
                 Take a break instead
@@ -223,7 +239,7 @@ export default function CancelFlowModal({
             </>
           )}
 
-          {offerType === 'discount' && (
+          {!hasActiveOffer && offerType === 'discount' && (
             <>
               <p style={{ margin: 0, fontWeight: 600, fontSize: '17px', color: '#111827' }}>
                 How about {config.discount_percent}% off?

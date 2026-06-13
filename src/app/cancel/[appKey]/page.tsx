@@ -142,6 +142,7 @@ export default async function CancelPage({ params, searchParams }: Props) {
       amount={amount}
       currency={currency}
       config={config}
+      hasActiveOffer={false}
     />
   )
 }

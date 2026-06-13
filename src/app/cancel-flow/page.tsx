@@ -118,6 +118,27 @@ export default async function CancelFlowPage({ searchParams }: Props) {
 
   const config = configData ? (configData as ConfigRow) : DEFAULT_CONFIG
 
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+  const { data: monitoredCustomer } = await supabase
+    .from('monitored_customers')
+    .select('id')
+    .eq('stripe_customer_id', customerId)
+    .eq('user_id', keyRow.user_id)
+    .maybeSingle()
+
+  let hasActiveOffer = false
+  if (monitoredCustomer) {
+    const { data: recentOffer } = await supabase
+      .from('cancellation_events')
+      .select('id')
+      .eq('monitored_customer_id', (monitoredCustomer as { id: string }).id)
+      .in('outcome', ['discounted', 'paused'])
+      .gte('created_at', thirtyDaysAgo)
+      .limit(1)
+      .maybeSingle()
+    hasActiveOffer = !!recentOffer
+  }
+
   return (
     <CancelFlowModal
       appKey={key}
@@ -129,6 +150,7 @@ export default async function CancelFlowPage({ searchParams }: Props) {
       amount={amount}
       currency={currency}
       config={config}
+      hasActiveOffer={hasActiveOffer}
     />
   )
 }
