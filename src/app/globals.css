@@ -115,3 +115,11 @@
   .fill-blue-accent { fill: var(--blue-accent); }
   .border-blue-accent { border-color: var(--blue-accent); }
 }
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

@@ -60,7 +60,7 @@ export default async function CardUpdatePage({ searchParams }: Props) {
   const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <CardUpdateForm
         clientSecret={setupIntent.client_secret}
         publishableKey={publishableKey}
@@ -74,10 +74,10 @@ export default async function CardUpdatePage({ searchParams }: Props) {
 
 function ErrorPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="max-w-sm text-center p-8">
-        <h1 className="text-xl font-semibold text-foreground mb-3">Link unavailable</h1>
-        <p className="text-muted-foreground">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 max-w-sm w-full text-center">
+        <h1 className="text-lg font-semibold text-gray-900 mb-2">Link unavailable</h1>
+        <p className="text-sm text-gray-500">
           This link has expired or is invalid. Please contact support.
         </p>
       </div>

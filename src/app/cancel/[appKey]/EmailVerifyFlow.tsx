@@ -16,9 +16,9 @@ type FlowData = {
 const cardStyle: React.CSSProperties = {
   background: 'white',
   borderRadius: '12px',
-  padding: '32px',
+  padding: '40px',
   width: '100%',
-  maxWidth: '400px',
+  maxWidth: '448px',
   boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
 }
 

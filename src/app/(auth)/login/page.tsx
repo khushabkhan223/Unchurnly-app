@@ -5,17 +5,12 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createBrowserClient } from '@/lib/supabase'
 import { createSession } from '@/app/actions/auth'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
+
+const inputClass =
+  'w-full bg-card border border-border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-white/20 transition-colors'
+
+const labelClass =
+  'text-xs font-medium text-muted-foreground uppercase tracking-widest mb-1.5 block'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -56,64 +51,65 @@ export default function LoginPage() {
   }
 
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader>
-        <CardTitle>Sign in</CardTitle>
-        <CardDescription>
-          Enter your email and password to access your dashboard.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form id="login-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-          {error && (
-            <p role="alert" className="text-sm text-destructive">
-              {error}
-            </p>
-          )}
-        </form>
-      </CardContent>
-      <CardFooter className="flex flex-col gap-3">
-        <Button
+    <div className="w-full max-w-sm">
+      {/* Logo */}
+      <div className="flex items-center justify-center mb-8">
+        <div className="w-8 h-8 rounded-lg bg-foreground text-background text-sm font-bold flex items-center justify-center">
+          U
+        </div>
+        <span className="text-white font-semibold text-lg ml-2">Unchurnly</span>
+      </div>
+
+      <h1 className="text-xl font-semibold text-foreground mb-1">Welcome back</h1>
+      <p className="text-sm text-muted-foreground mb-6">
+        Enter your email and password to access your dashboard.
+      </p>
+      <form onSubmit={handleSubmit}>
+        <label htmlFor="email" className={labelClass}>
+          Email
+        </label>
+        <input
+          id="email"
+          type="email"
+          autoComplete="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
+          className={inputClass}
+        />
+        <label htmlFor="password" className={`${labelClass} mt-4`}>
+          Password
+        </label>
+        <input
+          id="password"
+          type="password"
+          autoComplete="current-password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Your password"
+          className={inputClass}
+        />
+        {error && (
+          <p role="alert" className="text-sm text-destructive mt-2">
+            {error}
+          </p>
+        )}
+        <button
           type="submit"
-          form="login-form"
-          className="w-full"
-          size="lg"
           disabled={isLoading}
+          className="w-full bg-emerald text-background rounded-lg py-2.5 text-sm font-medium hover:opacity-90 transition-opacity mt-5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? 'Signing in…' : 'Sign in'}
-        </Button>
-        <p className="text-sm text-muted-foreground text-center">
-          Don&apos;t have an account?{' '}
-          <Link
-            href="/signup"
-            className="text-foreground underline-offset-4 hover:underline"
-          >
-            Sign up
-          </Link>
-        </p>
-      </CardFooter>
-    </Card>
+        </button>
+      </form>
+      <p className="text-sm text-muted-foreground text-center mt-4">
+        Don&apos;t have an account?{' '}
+        <Link href="/signup" className="text-emerald hover:opacity-80">
+          Sign up
+        </Link>
+      </p>
+    </div>
   )
 }

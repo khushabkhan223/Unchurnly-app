@@ -4,15 +4,6 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 
 type CardUpdateFormProps = {
   clientSecret: string
@@ -69,18 +60,17 @@ function CheckoutForm({ customerId, userId, setupIntentId }: CheckoutFormProps) 
     <form onSubmit={handleSubmit}>
       <PaymentElement />
       {error && (
-        <p role="alert" className="text-sm text-destructive mt-3">
+        <p role="alert" className="text-sm text-red-500 mt-2">
           {error}
         </p>
       )}
-      <Button
+      <button
         type="submit"
         disabled={isLoading || !stripe}
-        className="w-full mt-4"
-        size="lg"
+        className="w-full bg-gray-900 text-white rounded-xl py-3 text-sm font-medium hover:bg-gray-800 transition-colors mt-4 cursor-pointer border-none disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isLoading ? 'Processing…' : 'Update payment method'}
-      </Button>
+      </button>
     </form>
   )
 }
@@ -95,23 +85,18 @@ export default function CardUpdateForm({
   const stripePromise = useMemo(() => loadStripe(publishableKey), [publishableKey])
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Update your payment method</CardTitle>
-        <CardDescription>
-          Enter your new card details to keep your subscription active.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Elements stripe={stripePromise} options={{ clientSecret }}>
-          <CheckoutForm
-            customerId={customerId}
-            userId={userId}
-            setupIntentId={setupIntentId}
-          />
-        </Elements>
-      </CardContent>
-      <CardFooter />
-    </Card>
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm w-full max-w-md p-8">
+      <h2 className="text-lg font-semibold text-gray-900 mb-1">Update your payment method</h2>
+      <p className="text-sm text-gray-500 mb-6">
+        Enter your new card details to keep your subscription active.
+      </p>
+      <Elements stripe={stripePromise} options={{ clientSecret }}>
+        <CheckoutForm
+          customerId={customerId}
+          userId={userId}
+          setupIntentId={setupIntentId}
+        />
+      </Elements>
+    </div>
   )
 }
