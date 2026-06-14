@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { ChevronRight } from 'lucide-react'
 
 type Config = {
   pause_enabled: boolean
@@ -91,253 +92,197 @@ export default function CancelFlowModal({
     setIsLoading(false)
   }
 
-  const containerStyle: React.CSSProperties = {
-    fontFamily: 'system-ui, sans-serif',
-    padding: '24px',
-    height: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    position: 'relative',
-    boxSizing: 'border-box',
-    overflowY: 'auto',
-  }
-
-  const btnBase: React.CSSProperties = {
-    width: '100%',
-    padding: '12px 16px',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 500,
-    textAlign: 'left',
-    transition: 'background 0.15s',
-  }
-
-  const btnOutline: React.CSSProperties = {
-    ...btnBase,
-    background: '#fff',
-    border: '1px solid #e5e7eb',
-    color: '#111827',
-  }
-
-  const btnPrimary: React.CSSProperties = {
-    ...btnBase,
-    background: '#2563eb',
-    border: 'none',
-    color: '#fff',
-    textAlign: 'center',
-  }
-
-  const btnDestructive: React.CSSProperties = {
-    ...btnBase,
-    background: 'none',
-    border: '1px solid #fca5a5',
-    color: '#dc2626',
-    textAlign: 'center',
-  }
-
   return (
-    <div style={containerStyle}>
-      {/* Close button */}
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center relative px-8 py-8">
       <button
         onClick={close}
         aria-label="Close"
-        style={{
-          position: 'absolute',
-          top: '16px',
-          right: '16px',
-          background: 'none',
-          border: 'none',
-          fontSize: '20px',
-          cursor: 'pointer',
-          color: '#9ca3af',
-          lineHeight: 1,
-        }}
+        className="absolute top-4 right-4 bg-transparent border-none text-gray-400 hover:text-gray-600 cursor-pointer text-xl leading-none"
       >
         ×
       </button>
 
-      {step === 'reason' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: '18px', color: '#111827' }}>
-            Before you go, {customerName}…
-          </p>
-          <p style={{ margin: '0 0 16px', color: '#6b7280', fontSize: '14px' }}>
-            Why are you thinking of cancelling?
-          </p>
-          {(
-            [
-              ['too_expensive', "It's too expensive"],
-              ['not_using', "I'm not using it enough"],
-              ['better_alternative', 'I found a better alternative'],
-              ['technical_issues', "I'm having technical issues"],
-              ['taking_a_break', 'Just taking a break'],
-            ] as [Reason, string][]
-          ).map(([value, label]) => (
+        {step === 'reason' && (
+          <div className="flex flex-col w-full max-w-md">
+            <p className="text-xl font-semibold text-gray-900 mb-1 m-0">
+              Before you go, {customerName}…
+            </p>
+            <p className="text-sm text-gray-400 mb-6 m-0">
+              Why are you thinking of cancelling?
+            </p>
+            {(
+              [
+                ['too_expensive', "It's too expensive"],
+                ['not_using', "I'm not using it enough"],
+                ['better_alternative', 'I found a better alternative'],
+                ['technical_issues', "I'm having technical issues"],
+                ['taking_a_break', 'Just taking a break'],
+              ] as [Reason, string][]
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                onClick={() => selectReason(value)}
+                className="w-full text-left px-5 py-3.5 rounded-xl border border-gray-100 bg-gray-50 text-sm font-medium text-gray-700 hover:bg-white hover:border-gray-300 hover:shadow-sm transition-all mt-2 cursor-pointer flex justify-between items-center"
+              >
+                {label}
+                <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+              </button>
+            ))}
             <button
-              key={value}
-              onClick={() => selectReason(value)}
-              style={btnOutline}
+              onClick={() => handleAction('cancel')}
+              disabled={isLoading}
+              className="mt-8 text-xs text-gray-400 hover:text-gray-500 underline-offset-2 hover:underline bg-transparent border-none cursor-pointer p-0 self-start"
             >
-              {label}
+              Just cancel
             </button>
-          ))}
-          <button
-            onClick={() => handleAction('cancel')}
-            disabled={isLoading}
-            style={{ ...btnDestructive, marginTop: '8px', textAlign: 'center' }}
-          >
-            Just cancel
-          </button>
-          {error && (
-            <p role="alert" style={{ color: '#dc2626', fontSize: '13px', margin: '4px 0 0' }}>
-              {error}
-            </p>
-          )}
-        </div>
-      )}
+            {error && (
+              <p role="alert" className="text-red-600 text-xs mt-2 m-0">
+                {error}
+              </p>
+            )}
+          </div>
+        )}
 
-      {step === 'offer' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {hasActiveOffer && (offerType === 'pause' || offerType === 'discount') ? (
-            <>
-              <p style={{ margin: 0, color: '#6b7280', fontSize: '13px' }}>
-                A retention offer was already applied to your account recently.
-              </p>
-              <button
-                onClick={() => handleAction('cancel')}
-                disabled={isLoading}
-                style={btnDestructive}
-              >
-                {isLoading ? 'Processing…' : 'Cancel my subscription'}
-              </button>
-            </>
-          ) : null}
-          {!hasActiveOffer && offerType === 'pause' && (
-            <>
-              <p style={{ margin: 0, fontWeight: 600, fontSize: '17px', color: '#111827' }}>
-                Take a break instead
-              </p>
-              <p style={{ margin: 0, color: '#6b7280', fontSize: '14px' }}>
-                Pause your {planName} subscription for 1 month. Your account stays intact and
-                resumes automatically — no action needed.
-              </p>
-              <button
-                onClick={() => handleAction('pause')}
-                disabled={isLoading}
-                style={btnPrimary}
-              >
-                {isLoading ? 'Processing…' : 'Pause for 1 month'}
-              </button>
-              <button
-                onClick={() => handleAction('cancel')}
-                disabled={isLoading}
-                style={btnDestructive}
-              >
-                No thanks, cancel my subscription
-              </button>
-            </>
-          )}
+        {step === 'offer' && (
+          <div className="flex flex-col w-full max-w-md">
+            {hasActiveOffer && (offerType === 'pause' || offerType === 'discount') ? (
+              <>
+                <p className="text-sm text-gray-500 m-0">
+                  A retention offer was already applied to your account recently.
+                </p>
+                <button
+                  onClick={() => handleAction('cancel')}
+                  disabled={isLoading}
+                  className="text-sm text-gray-400 hover:text-gray-600 underline-offset-2 hover:underline mt-3 block text-center bg-transparent border-none cursor-pointer w-full p-0"
+                >
+                  {isLoading ? 'Processing…' : 'Cancel my subscription'}
+                </button>
+              </>
+            ) : null}
 
-          {!hasActiveOffer && offerType === 'discount' && (
-            <>
-              <p style={{ margin: 0, fontWeight: 600, fontSize: '17px', color: '#111827' }}>
-                How about {config.discount_percent}% off?
-              </p>
-              <p style={{ margin: 0, color: '#6b7280', fontSize: '14px' }}>
-                Stay on {planName} at {config.discount_percent}% off for the next 3 months.
-                Your discount applies to your next billing cycle automatically.
-              </p>
-              <button
-                onClick={() => handleAction('discount')}
-                disabled={isLoading}
-                style={btnPrimary}
-              >
-                {isLoading ? 'Processing…' : `Get ${config.discount_percent}% off`}
-              </button>
-              <button
-                onClick={() => handleAction('cancel')}
-                disabled={isLoading}
-                style={btnDestructive}
-              >
-                No thanks, cancel my subscription
-              </button>
-            </>
-          )}
+            {!hasActiveOffer && offerType === 'pause' && (
+              <>
+                <p className="text-xl font-semibold text-gray-900 mb-1 m-0">Take a break instead</p>
+                <p className="text-sm text-gray-400 mt-1 m-0">
+                  Pause your {planName} subscription for 1 month. Your account stays intact and
+                  resumes automatically — no action needed.
+                </p>
+                <button
+                  onClick={() => handleAction('pause')}
+                  disabled={isLoading}
+                  className="w-full bg-gray-900 text-white rounded-xl px-4 py-3.5 text-sm font-medium hover:bg-gray-800 transition-colors mt-4 cursor-pointer border-none"
+                >
+                  {isLoading ? 'Processing…' : 'Pause for 1 month'}
+                </button>
+                <button
+                  onClick={() => handleAction('cancel')}
+                  disabled={isLoading}
+                  className="text-sm text-gray-400 hover:text-gray-600 underline-offset-2 hover:underline mt-3 block text-center bg-transparent border-none cursor-pointer w-full p-0"
+                >
+                  No thanks, cancel my subscription
+                </button>
+              </>
+            )}
 
-          {offerType === 'support' && (
-            <>
-              <p style={{ margin: 0, fontWeight: 600, fontSize: '17px', color: '#111827' }}>
-                Let us help fix this
-              </p>
-              <p style={{ margin: 0, color: '#6b7280', fontSize: '14px' }}>
-                Having technical issues? Our support team can help resolve this quickly.
-                Please reach out and we'll get it sorted — most issues are fixed within 24 hours.
-              </p>
-              <button
-                onClick={close}
-                style={btnPrimary}
-              >
-                Contact support
-              </button>
-              <button
-                onClick={() => handleAction('cancel')}
-                disabled={isLoading}
-                style={btnDestructive}
-              >
-                {isLoading ? 'Processing…' : 'Cancel my subscription anyway'}
-              </button>
-            </>
-          )}
+            {!hasActiveOffer && offerType === 'discount' && (
+              <>
+                <p className="text-xl font-semibold text-gray-900 mb-1 m-0">
+                  How about {config.discount_percent}% off?
+                </p>
+                <p className="text-sm text-gray-400 mt-1 m-0">
+                  Stay on {planName} at {config.discount_percent}% off for the next 3 months.
+                  Your discount applies to your next billing cycle automatically.
+                </p>
+                <button
+                  onClick={() => handleAction('discount')}
+                  disabled={isLoading}
+                  className="w-full bg-gray-900 text-white rounded-xl px-4 py-3.5 text-sm font-medium hover:bg-gray-800 transition-colors mt-4 cursor-pointer border-none"
+                >
+                  {isLoading ? 'Processing…' : `Get ${config.discount_percent}% off`}
+                </button>
+                <button
+                  onClick={() => handleAction('cancel')}
+                  disabled={isLoading}
+                  className="text-sm text-gray-400 hover:text-gray-600 underline-offset-2 hover:underline mt-3 block text-center bg-transparent border-none cursor-pointer w-full p-0"
+                >
+                  No thanks, cancel my subscription
+                </button>
+              </>
+            )}
 
-          {offerType === null && (
-            <>
-              <p style={{ margin: 0, fontWeight: 600, fontSize: '17px', color: '#111827' }}>
-                We're sorry to see you go
+            {offerType === 'support' && (
+              <>
+                <p className="text-xl font-semibold text-gray-900 mb-1 m-0">Let us help fix this</p>
+                <p className="text-sm text-gray-400 mt-1 m-0">
+                  Having technical issues? Our support team can help resolve this quickly.
+                  Please reach out and we'll get it sorted — most issues are fixed within 24 hours.
+                </p>
+                <button
+                  onClick={close}
+                  className="w-full bg-gray-900 text-white rounded-xl px-4 py-3.5 text-sm font-medium hover:bg-gray-800 transition-colors mt-4 cursor-pointer border-none"
+                >
+                  Contact support
+                </button>
+                <button
+                  onClick={() => handleAction('cancel')}
+                  disabled={isLoading}
+                  className="text-sm text-gray-400 hover:text-gray-600 underline-offset-2 hover:underline mt-3 block text-center bg-transparent border-none cursor-pointer w-full p-0"
+                >
+                  {isLoading ? 'Processing…' : 'Cancel my subscription anyway'}
+                </button>
+              </>
+            )}
+
+            {offerType === null && (
+              <>
+                <p className="text-xl font-semibold text-gray-900 mb-1 m-0">
+                  We're sorry to see you go
+                </p>
+                <p className="text-sm text-gray-400 mt-1 m-0">
+                  We'll cancel your {planName} subscription. You'll keep access until the end
+                  of your current billing period.
+                </p>
+                <button
+                  onClick={() => handleAction('cancel')}
+                  disabled={isLoading}
+                  className="text-sm text-gray-400 hover:text-gray-600 underline-offset-2 hover:underline mt-3 block text-center bg-transparent border-none cursor-pointer w-full p-0"
+                >
+                  {isLoading ? 'Processing…' : 'Cancel my subscription'}
+                </button>
+              </>
+            )}
+
+            {error && (
+              <p role="alert" className="text-red-600 text-xs mt-2 m-0">
+                {error}
               </p>
-              <p style={{ margin: 0, color: '#6b7280', fontSize: '14px' }}>
-                We'll cancel your {planName} subscription. You'll keep access until the end
-                of your current billing period.
-              </p>
-              <button
-                onClick={() => handleAction('cancel')}
-                disabled={isLoading}
-                style={btnDestructive}
+            )}
+          </div>
+        )}
+
+        {step === 'done' && (
+          <div className="flex flex-col items-center gap-4 text-center py-4 w-full max-w-md">
+            <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center">
+              <svg
+                className="w-6 h-6 text-emerald-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
               >
-                {isLoading ? 'Processing…' : 'Cancel my subscription'}
-              </button>
-            </>
-          )}
-
-          {error && (
-            <p role="alert" style={{ color: '#dc2626', fontSize: '13px', margin: '4px 0 0' }}>
-              {error}
-            </p>
-          )}
-        </div>
-      )}
-
-      {step === 'done' && (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flex: 1,
-            gap: '16px',
-            textAlign: 'center',
-          }}
-        >
-          <p style={{ fontWeight: 600, fontSize: '17px', color: '#111827', margin: 0 }}>
-            You're all set
-          </p>
-          <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>{doneMessage}</p>
-          <button onClick={close} style={{ ...btnOutline, width: 'auto', padding: '8px 24px' }}>
-            Close
-          </button>
-        </div>
-      )}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <p className="text-xl font-semibold text-gray-900 m-0">You're all set</p>
+            <p className="text-sm text-gray-400 m-0">{doneMessage}</p>
+            <button
+              onClick={close}
+              className="w-full bg-gray-900 text-white rounded-xl px-4 py-3.5 text-sm font-medium hover:bg-gray-800 transition-colors mt-2 cursor-pointer border-none"
+            >
+              Close
+            </button>
+          </div>
+        )}
     </div>
   )
 }

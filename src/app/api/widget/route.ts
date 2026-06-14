@@ -12,7 +12,7 @@ const JS_TEMPLATE = `(function(){
     o.id='unchurnly-overlay';
     o.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:999999;display:flex;align-items:center;justify-content:center;';
     var f=document.createElement('iframe');
-    f.style.cssText='width:480px;max-width:95vw;height:600px;border:none;border-radius:12px;background:white;';
+    f.style.cssText='width:480px;max-width:95vw;height:600px;border:none;border-radius:20px;background:white;';
     f.src=window.unchurnly.apiBase+'/cancel-flow?key='+encodeURIComponent(window.unchurnly.appKey)+'&customerId='+encodeURIComponent(config.customerId)+'&authHash='+encodeURIComponent(config.authHash);
     o.appendChild(f);document.body.appendChild(o);
     fetch(window.unchurnly.apiBase+'/api/widget',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({appKey:window.unchurnly.appKey})}).catch(function(){});
