@@ -16,6 +16,7 @@ export default function Footer() {
         <nav className="flex items-center gap-6">
           <Link href="/privacy" className="text-sm text-gray-400 hover:text-gray-700 transition-colors">Privacy</Link>
           <Link href="/terms" className="text-sm text-gray-400 hover:text-gray-700 transition-colors">Terms</Link>
+          <Link href="/refund" className="text-sm text-gray-400 hover:text-gray-700 transition-colors">Refund</Link>
           <a href="mailto:support@unchurnly.com" className="text-sm text-gray-400 hover:text-gray-700 transition-colors">
             support@unchurnly.com
           </a>
