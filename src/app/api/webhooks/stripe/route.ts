@@ -163,6 +163,12 @@ async function handleInvoicePaymentSucceeded(
     })
     .eq('id', (activeSeq as IdRow).id)
 
+  await supabase
+    .from('users')
+    .update({ first_recovery_at: new Date().toISOString() })
+    .eq('id', uid)
+    .is('first_recovery_at', null)
+
   logger.info('Dunning sequence marked recovered', {
     sequenceId: (activeSeq as IdRow).id,
     recovered_mrr_cents: invoice.amount_paid,

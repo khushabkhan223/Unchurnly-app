@@ -13,6 +13,7 @@ import {
   LogOut,
   Code2,
   LifeBuoy,
+  CreditCard,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -139,6 +140,13 @@ export default function Sidebar({
             icon={Settings}
             label="Settings"
             active={isActive('/dashboard/settings', false)}
+          />
+          <NavItem
+            href="/dashboard/billing"
+            icon={CreditCard}
+            label="Billing"
+            subtitle="Plan & payments"
+            active={isActive('/dashboard/billing', false)}
           />
         </div>
       </nav>

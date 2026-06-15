@@ -158,6 +158,12 @@ export async function POST(request: Request) {
         outcome: 'paused',
       })
 
+      await supabase
+        .from('users')
+        .update({ first_recovery_at: new Date().toISOString() })
+        .eq('id', userId)
+        .is('first_recovery_at', null)
+
       return NextResponse.json({
         success: true,
         message: 'Your subscription has been paused for 1 month.',
@@ -186,6 +192,12 @@ export async function POST(request: Request) {
         monitored_customer_id: monitoredCustomerId,
         outcome: 'discounted',
       })
+
+      await supabase
+        .from('users')
+        .update({ first_recovery_at: new Date().toISOString() })
+        .eq('id', userId)
+        .is('first_recovery_at', null)
 
       return NextResponse.json({
         success: true,

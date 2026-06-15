@@ -17,14 +17,37 @@ export default async function DashboardLayout({
   if (!session) redirect('/login')
 
   const supabase = createServerClient()
-  const { data: userData } = await supabase
-    .from('users')
-    .select('widget_installed, company_name')
-    .eq('id', session.userId)
-    .maybeSingle()
+
+  const [userResult, billingResult] = await Promise.all([
+    supabase
+      .from('users')
+      .select('widget_installed, company_name')
+      .eq('id', session.userId)
+      .maybeSingle(),
+    supabase
+      .from('users')
+      .select('first_recovery_at, subscription_status, grace_period_ends_at')
+      .eq('id', session.userId)
+      .maybeSingle(),
+  ])
+
+  const userData = userResult.data
+  const billingData = billingResult.data
 
   const widgetInstalled = userData?.widget_installed ?? false
   const companyName = userData?.company_name ?? null
+
+  const firstRecoveryAt = billingData?.first_recovery_at ?? null
+  const subscriptionStatus = billingData?.subscription_status ?? null
+  const gracePeriodEndsAt = billingData?.grace_period_ends_at ?? null
+
+  const isPaywalled =
+    firstRecoveryAt !== null &&
+    subscriptionStatus !== 'active' &&
+    gracePeriodEndsAt !== null &&
+    new Date(gracePeriodEndsAt) < new Date()
+
+  if (isPaywalled) redirect('/subscribe')
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Copy, Check, AlertTriangle } from 'lucide-react'
+import { Copy, Check, AlertTriangle, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react'
 
 type Connection = {
   stripe_account_id: string | null
@@ -12,6 +12,7 @@ type Connection = {
 } | null
 
 type GeneratedKey = { appKey: string; appSecret: string }
+type InstallPath = 'choose' | 'widget' | 'nocode'
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 
@@ -41,10 +42,16 @@ export default function InstallationPage({
   const [generatedKey, setGeneratedKey] = useState<GeneratedKey | null>(null)
   const [generating, setGenerating] = useState(false)
   const [genError, setGenError] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState<string | null>(null)
+  const [installPath, setInstallPath] = useState<InstallPath>('choose')
+  const [hmacExpanded, setHmacExpanded] = useState(false)
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
-  const scriptTag = appKey ? `<script src="${appUrl}/api/widget?key=${appKey}" async></script>` : ''
+  const scriptTag = appKey
+    ? `<script src="${appUrl}/api/widget?key=${appKey}" async></script>`
+    : ''
+  const cancelUrl = appKey ? `${appUrl}/cancel/${appKey}` : ''
+  const initSnippet = `window.unchurnly.init('show', {\n  customerId: stripeCustomerId,\n  authHash: authHash\n})`
   const hmacSnippet = `const crypto = require('crypto')
 const authHash = crypto
   .createHmac('sha256', process.env.APP_SECRET)
@@ -56,7 +63,8 @@ const authHash = crypto
     setGenError(null)
     const res = await fetch('/api/app-keys/generate', { method: 'POST' })
     const data: unknown = await res.json()
-    const payload = typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : {}
+    const payload =
+      typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : {}
     if (!res.ok) {
       setGenError(typeof payload.error === 'string' ? payload.error : 'Failed to generate')
       setGenerating(false)
@@ -69,28 +77,54 @@ const authHash = crypto
     setGenerating(false)
   }
 
-  async function copyScript() {
+  async function copySnippet(text: string, id: string) {
     try {
-      await navigator.clipboard.writeText(scriptTag)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      await navigator.clipboard.writeText(text)
+      setCopied(id)
+      setTimeout(() => setCopied(null), 2000)
     } catch {
       // clipboard unavailable
     }
   }
 
+  function CodeBlock({ code, copyId }: { code: string; copyId: string }) {
+    return (
+      <div className="relative">
+        <pre className="overflow-x-auto rounded-md bg-popover p-4 pr-16 text-sm font-mono text-foreground">
+          {code}
+        </pre>
+        <button
+          onClick={() => copySnippet(code, copyId)}
+          className="absolute right-3 top-3 flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        >
+          {copied === copyId ? (
+            <>
+              <Check className="h-3 w-3 text-emerald" />
+              <span>Copied</span>
+            </>
+          ) : (
+            <>
+              <Copy className="h-3 w-3" />
+              <span>Copy</span>
+            </>
+          )}
+        </button>
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-5">
-      {/* Stripe Connection */}
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+    <div className="space-y-7">
+      {/* ── Stripe Connection (unchanged) ─────────────────────── */}
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
         <div className="border-b border-border px-5 py-3.5">
           <h2 className="text-sm font-semibold text-foreground">Stripe Connection</h2>
         </div>
         <div className="px-5 py-4">
           {state === 'connected' && (
             <div className="space-y-3">
-              <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-emerald shrink-0" />
+              <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-4 py-3">
+                <span className="h-2 w-2 shrink-0 rounded-full bg-emerald" />
                 <span className="text-sm font-medium text-emerald-400">Connected</span>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -101,20 +135,20 @@ const authHash = crypto
               </p>
               {connection?.webhook_configured_at ? (
                 <p className="text-xs text-muted-foreground">
-                  Webhook: <span className="text-emerald font-medium">configured</span>
+                  Webhook: <span className="font-medium text-emerald">configured</span>
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  Webhook: <span className="text-amber-400 font-medium">not configured</span>
+                  Webhook: <span className="font-medium text-amber-400">not configured</span>
                 </p>
               )}
             </div>
           )}
 
           {state === 'token_error' && (
-            <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-4 space-y-2">
+            <div className="space-y-2 rounded-lg border border-amber-500/20 bg-amber-500/10 p-4">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
+                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400" />
                 <p className="text-sm font-medium text-amber-300">Stripe key may be invalid</p>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -123,7 +157,7 @@ const authHash = crypto
               </p>
               <Link
                 href="/dashboard/connect"
-                className="inline-block mt-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 transition-opacity hover:opacity-80"
+                className="mt-2 inline-block rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 transition-opacity hover:opacity-80"
               >
                 Re-authorize →
               </Link>
@@ -132,8 +166,8 @@ const authHash = crypto
 
           {state === 'not_connected' && (
             <div className="space-y-3">
-              <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-destructive shrink-0" />
+              <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3">
+                <span className="h-2 w-2 shrink-0 rounded-full bg-destructive" />
                 <span className="text-sm font-medium text-destructive">Not connected</span>
               </div>
               <Link
@@ -147,97 +181,230 @@ const authHash = crypto
         </div>
       </div>
 
-      {/* Widget Setup */}
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      {/* ── Cancel Flow Setup ──────────────────────────────────── */}
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
         <div className="border-b border-border px-5 py-3.5">
-          <h2 className="text-sm font-semibold text-foreground">Widget Setup</h2>
+          <h2 className="text-sm font-semibold text-foreground">Cancel Flow Setup</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Choose the integration path that fits your setup.
+          </p>
         </div>
-        <div className="px-5 py-4 space-y-4">
-          {!appKey ? (
-            <div>
-              <p className="text-sm text-muted-foreground mb-3">
-                Generate an API key to embed the cancel flow widget in your app.
-              </p>
-              <button
-                onClick={handleGenerateKey}
-                disabled={generating}
-                className="rounded-lg bg-emerald px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-50"
-              >
-                {generating ? 'Generating…' : 'Generate API Keys'}
-              </button>
-              {genError && <p className="text-sm text-destructive mt-2">{genError}</p>}
-            </div>
-          ) : null}
 
-          {generatedKey && (
-            <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-4 space-y-2">
-              <p className="text-xs font-medium text-amber-300">
-                Save your secret — it won&apos;t be shown again
-              </p>
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">App Key</p>
-                <code className="text-xs font-mono text-foreground break-all">{generatedKey.appKey}</code>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">App Secret (save this now)</p>
-                <code className="text-xs font-mono text-amber-300 break-all">{generatedKey.appSecret}</code>
-              </div>
+        <div className="px-5 py-4">
+          {/* ── Choose path ─────────────────────────────────── */}
+          {installPath === 'choose' && (
+            <div className="space-y-4">
+              <button
+                onClick={() => setInstallPath('widget')}
+                className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border border-border p-4 text-left transition-colors hover:bg-secondary/40"
+              >
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    They click Cancel in my app
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    You have a billing or account page with a Cancel button you control.
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </button>
+
+              <button
+                onClick={() => setInstallPath('nocode')}
+                className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border border-border p-4 text-left transition-colors hover:bg-secondary/40"
+              >
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    I send them a link / I use Stripe&apos;s portal
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    You don&apos;t have your own cancel button — you redirect to Stripe or share a
+                    link.
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </button>
             </div>
           )}
 
-          {appKey && (
-            <div className="space-y-4">
-              <div>
-                <p className="text-xs text-muted-foreground mb-2">Add to your HTML {'<head>'}:</p>
-                <div className="relative">
-                  <pre className="rounded-md bg-popover p-4 text-sm font-mono text-foreground overflow-x-auto pr-14">
-                    {scriptTag}
-                  </pre>
-                  <button
-                    onClick={copyScript}
-                    className="absolute top-3 right-3 flex items-center gap-1 rounded-md border border-border bg-secondary px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary/80"
-                    title="Copy"
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="h-3 w-3 text-emerald-400" />
-                        <span>Copied</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-3 w-3" />
-                        <span>Copy</span>
-                      </>
-                    )}
-                  </button>
+          {/* ── Widget path ─────────────────────────────────── */}
+          {installPath === 'widget' && (
+            <div className="space-y-7">
+              <button
+                onClick={() => setInstallPath('choose')}
+                className="text-sm text-foreground transition-opacity hover:opacity-70"
+              >
+                ← Choose a different method
+              </button>
+
+              {generatedKey && (
+                <div className="space-y-2 rounded-lg border border-amber-500/20 bg-amber-500/10 p-4">
+                  <p className="text-xs font-medium text-amber-300">
+                    Save your secret — it won&apos;t be shown again
+                  </p>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">App Key</p>
+                    <code className="break-all text-xs font-mono text-foreground">
+                      {generatedKey.appKey}
+                    </code>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">App Secret (save this now)</p>
+                    <code className="break-all text-xs font-mono text-amber-300">
+                      {generatedKey.appSecret}
+                    </code>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div>
-                <p className="text-xs text-muted-foreground mb-2">Generate HMAC in your backend:</p>
-                <pre className="rounded-md bg-popover p-4 text-sm font-mono text-foreground overflow-x-auto">
-                  {hmacSnippet}
-                </pre>
-              </div>
+              {!appKey ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Generate an API key to get started.
+                  </p>
+                  <button
+                    onClick={handleGenerateKey}
+                    disabled={generating}
+                    className="rounded-lg bg-emerald px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-50"
+                  >
+                    {generating ? 'Generating…' : 'Generate API Keys'}
+                  </button>
+                  {genError && <p className="text-sm text-destructive">{genError}</p>}
+                </div>
+              ) : (
+                <div className="space-y-7">
+                  {/* Step 1 */}
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold text-foreground">
+                      1 — Add this script to your HTML &lt;head&gt;
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Paste this once into your app&apos;s HTML head. In Next.js, add it to{' '}
+                      <code className="font-mono">app/layout.tsx</code>. In React, add it to{' '}
+                      <code className="font-mono">public/index.html</code>.
+                    </p>
+                    <CodeBlock code={scriptTag} copyId="script" />
+                  </div>
 
-              <div>
-                <p className="text-xs text-muted-foreground mb-2">On cancel button click:</p>
-                <pre className="rounded-md bg-popover p-4 text-sm font-mono text-foreground overflow-x-auto">
-                  {`window.unchurnly.init('show', {\n  customerId: stripeCustomerId,\n  authHash: authHash\n})`}
-                </pre>
-              </div>
+                  {/* Step 2 */}
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold text-foreground">
+                      2 — Trigger the widget on your Cancel button
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      On your Cancel button&apos;s click handler, call this. Replace{' '}
+                      <code className="font-mono">stripeCustomerId</code> with the actual Stripe
+                      customer ID of the logged-in user.
+                    </p>
+                    <CodeBlock code={initSnippet} copyId="init" />
+                  </div>
+
+                  {/* HMAC collapsible */}
+                  <div className="border-t border-border pt-6">
+                    <button
+                      onClick={() => setHmacExpanded((v) => !v)}
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      {hmacExpanded ? (
+                        <>
+                          <ChevronUp className="h-3.5 w-3.5" />
+                          Hide HMAC verification
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="h-3.5 w-3.5" />
+                          Want extra security? Enable HMAC verification →
+                        </>
+                      )}
+                    </button>
+                    {hmacExpanded && (
+                      <div className="mt-4 space-y-3">
+                        <p className="text-xs text-muted-foreground">
+                          HMAC prevents customers from triggering the widget for other accounts.
+                          Enable it in Cancel Flows → Settings after setup.
+                        </p>
+                        <CodeBlock code={hmacSnippet} copyId="hmac" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── No-code path ─────────────────────────────────── */}
+          {installPath === 'nocode' && (
+            <div className="space-y-7">
+              <button
+                onClick={() => setInstallPath('choose')}
+                className="text-sm text-foreground transition-opacity hover:opacity-70"
+              >
+                ← Choose a different method
+              </button>
+
+              {!appKey ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Generate an API key to get your cancel URL.
+                  </p>
+                  <button
+                    onClick={handleGenerateKey}
+                    disabled={generating}
+                    className="rounded-lg bg-emerald px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-50"
+                  >
+                    {generating ? 'Generating…' : 'Generate API Keys'}
+                  </button>
+                  {genError && <p className="text-sm text-destructive">{genError}</p>}
+                </div>
+              ) : (
+                <div className="space-y-7">
+                  {/* Option 1 — Stripe portal */}
+                  <div className="space-y-4 rounded-lg border border-border p-4">
+                    <p className="text-sm font-medium text-foreground">
+                      Using Stripe&apos;s hosted billing portal?
+                    </p>
+                    <ol className="list-decimal list-inside space-y-1.5 text-xs text-muted-foreground">
+                      <li>Go to Stripe Dashboard → Settings → Billing → Customer portal</li>
+                      <li>Under Cancellations, enable &quot;Redirect customers to a URL&quot;</li>
+                      <li>Paste this URL:</li>
+                    </ol>
+                    <CodeBlock code={cancelUrl} copyId="cancelUrl" />
+                    <p className="text-xs text-muted-foreground">
+                      When customers click Cancel in Stripe&apos;s portal, they&apos;ll be
+                      redirected to your Unchurnly cancel flow automatically.
+                    </p>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 border-t border-border" />
+                    <span className="text-xs text-muted-foreground">or</span>
+                    <div className="flex-1 border-t border-border" />
+                  </div>
+
+                  {/* Option 2 — Share a link */}
+                  <div className="space-y-4 rounded-lg border border-border p-4">
+                    <p className="text-sm font-medium text-foreground">Share a cancel link</p>
+                    <p className="text-xs text-muted-foreground">
+                      Paste it in emails, help docs, or any no-code tool. Customers verify their
+                      email to access the flow.
+                    </p>
+                    <CodeBlock code={cancelUrl} copyId="cancelUrl2" />
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
 
-      {/* Cancel Flow */}
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      {/* ── Cancel Flow ────────────────────────────────────────── */}
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
         <div className="px-5 py-4">
-          <h2 className="text-sm font-semibold text-foreground mb-2">Cancel Flow</h2>
-          <p className="text-sm text-muted-foreground mb-3">
-            The widget shows a retention modal when customers try to cancel. Configure which offers to
-            show them.
+          <h2 className="mb-2 text-sm font-semibold text-foreground">Cancel Flow</h2>
+          <p className="mb-3 text-sm text-muted-foreground">
+            The widget shows a retention modal when customers try to cancel. Configure which offers
+            to show them.
           </p>
           <Link
             href="/dashboard/retention"

@@ -14,6 +14,7 @@ import {
   Activity,
   AlertTriangle,
   CheckCircle,
+  Sparkles,
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -45,6 +46,9 @@ type Props = {
   userId: string
   daily_data: DayData[]
   recent_events: RecentEvent[]
+  first_recovery_at: string | null
+  subscription_status: string | null
+  grace_period_ends_at: string | null
 }
 
 const DEMO: Omit<
@@ -58,6 +62,9 @@ const DEMO: Omit<
   | 'daily_data'
   | 'recent_events'
   | 'mrr_baseline'
+  | 'first_recovery_at'
+  | 'subscription_status'
+  | 'grace_period_ends_at'
 > = {
   mrr_saved: 1240,
   roi_multiplier: 25.3,
@@ -130,6 +137,9 @@ export default function AnalyticsDashboard(props: Props) {
     mrr_baseline,
     initialShowBanner,
     userId,
+    first_recovery_at,
+    subscription_status,
+    grace_period_ends_at,
   } = props
 
   const isDemo = !stripe_connected && !has_events
@@ -146,6 +156,13 @@ export default function AnalyticsDashboard(props: Props) {
 
   const [bannerVisible, setBannerVisible] = useState(initialShowBanner)
   const [showSuccessToast, setShowSuccessToast] = useState(false)
+
+  const showBillingBanner =
+    first_recovery_at !== null &&
+    subscription_status !== 'active' &&
+    (grace_period_ends_at === null || new Date(grace_period_ends_at) > new Date())
+
+  const paymentLink = process.env.NEXT_PUBLIC_DODO_PAYMENT_LINK ?? '#'
 
   useEffect(() => {
     const supabase = createBrowserClient()
@@ -176,6 +193,24 @@ export default function AnalyticsDashboard(props: Props) {
 
   return (
     <div className="space-y-5">
+      {/* Billing prompt — first recovery, not yet subscribed */}
+      {showBillingBanner && (
+        <div className="flex items-center gap-3 rounded-xl border border-blue-500/20 bg-blue-500/10 px-4 py-3">
+          <Sparkles className="h-4 w-4 shrink-0 text-blue-400" aria-hidden="true" />
+          <p className="flex-1 text-sm text-blue-300">
+            Your first recovery just happened! Start your $49/month plan to keep Unchurnly protecting your revenue.
+          </p>
+          <a
+            href={paymentLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="whitespace-nowrap rounded-md bg-blue-500 px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          >
+            Start plan →
+          </a>
+        </div>
+      )}
+
       {/* Widget not installed banner */}
       {bannerVisible && (
         <div className="flex items-center gap-3 rounded-lg border border-amber-500/20 bg-amber-500/10 px-4 py-3">

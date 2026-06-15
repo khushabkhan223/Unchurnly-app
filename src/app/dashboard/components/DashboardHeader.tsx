@@ -29,6 +29,10 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
     title: 'Settings',
     subtitle: 'Your brand profile',
   },
+  '/dashboard/billing': {
+    title: 'Billing',
+    subtitle: 'Plan and payments',
+  },
 }
 
 export function DashboardHeader() {

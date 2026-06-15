@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifySessionToken } from '@/lib/session'
 import { createServerClient } from '@/lib/supabase'
+import { logger } from '@/lib/logger'
 import AnalyticsDashboard from './components/AnalyticsDashboard'
 
 type CancellationRow = {
@@ -27,7 +28,16 @@ type ConnectionRow = {
   webhook_configured_at: string | null
 }
 
-type UserRow = { widget_banner_dismissed_at: string | null; widget_installed: boolean }
+type UserRow = {
+  widget_banner_dismissed_at: string | null
+  widget_installed: boolean
+}
+
+type BillingRow = {
+  first_recovery_at: string | null
+  subscription_status: string | null
+  grace_period_ends_at: string | null
+}
 
 export default async function DashboardPage() {
   const cookieStore = await cookies()
@@ -38,7 +48,7 @@ export default async function DashboardPage() {
   const supabase = createServerClient()
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
-  const [connResult, seqResult, ceResult, impResult, userResult] = await Promise.all([
+  const [connResult, seqResult, ceResult, impResult, userResult, billingResult] = await Promise.all([
     supabase
       .from('stripe_connections')
       .select('stripe_baseline_mrr, webhook_configured_at')
@@ -64,6 +74,11 @@ export default async function DashboardPage() {
       .select('widget_banner_dismissed_at, widget_installed')
       .eq('id', session.userId)
       .maybeSingle(),
+    supabase
+      .from('users')
+      .select('first_recovery_at, subscription_status, grace_period_ends_at')
+      .eq('id', session.userId)
+      .maybeSingle(),
   ])
 
   const connection = connResult.data ? (connResult.data as ConnectionRow) : null
@@ -72,6 +87,14 @@ export default async function DashboardPage() {
   const impressions = (impResult.data ?? []) as ImpressionRow[]
   const userData = userResult.data ? (userResult.data as UserRow) : null
   const widget_installed = userData?.widget_installed ?? false
+
+  if (billingResult.error) {
+    logger.error('Failed to fetch billing fields from users table', {
+      reason: billingResult.error.message,
+      code: billingResult.error.code,
+    })
+  }
+  const billingData = billingResult.data ? (billingResult.data as BillingRow) : null
 
   const savedEvents = cancellations.filter((e) =>
     ['paused', 'discounted'].includes(e.outcome)
@@ -141,6 +164,9 @@ export default async function DashboardPage() {
       userId={session.userId}
       daily_data={daily_data}
       recent_events={recent_events}
+      first_recovery_at={billingData?.first_recovery_at ?? null}
+      subscription_status={billingData?.subscription_status ?? null}
+      grace_period_ends_at={billingData?.grace_period_ends_at ?? null}
     />
   )
 }

@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/process-dunning",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/refresh-mrr",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}

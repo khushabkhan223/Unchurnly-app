@@ -7,13 +7,20 @@ import { CheckCircle, Copy, Check, ChevronRight, ChevronDown, ChevronUp } from '
 import { createBrowserClient } from '@/lib/supabase'
 
 const VOICE_TAGS = [
-  { emoji: '👔', label: 'Formal / Corporate' },
-  { emoji: '⚡', label: 'Urgent / Direct' },
-  { emoji: '🍿', label: 'Casual / Friendly' },
-  { emoji: '🚀', label: 'Enthusiastic / Hype' },
-  { emoji: '🔒', label: 'Clinical / Secure' },
-  { emoji: '🛠️', label: 'Developer-to-Developer' },
+  'Formal / Corporate',
+  'Urgent / Direct',
+  'Casual / Friendly',
+  'Enthusiastic / Hype',
+  'Clinical / Secure',
+  'Developer-to-Developer',
 ]
+
+function stripEmoji(str: string): string {
+  return str
+    .replace(/[\u{1F300}-\u{1FFFF}]/gu, '')
+    .replace(/[\u{2600}-\u{26FF}]/gu, '')
+    .trim()
+}
 
 type Step3Sub = 'choose' | 'widget' | 'nocode'
 
@@ -101,6 +108,8 @@ export default function OnboardingPage() {
     })
   }
 
+
+
   async function handleSaveProfile() {
     setIsSavingProfile(true)
     await fetch('/api/onboarding/save-profile', {
@@ -108,7 +117,7 @@ export default function OnboardingPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         business_model: selectedModel,
-        brand_voice: selectedTags.join(', '),
+        brand_voice: selectedTags.map(stripEmoji).join(', '),
         company_name: companyName.trim(),
         support_email: supportEmail.trim(),
       }),
@@ -209,6 +218,16 @@ const authHash = crypto
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center pt-16 px-4">
+      {/* Back to home — step 1 only */}
+      {step === 1 && (
+        <a
+          href="/"
+          className="mb-6 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        >
+          ← Back to home
+        </a>
+      )}
+
       {/* Wordmark */}
       <div className="flex items-center gap-2 mb-8">
         <Image src="/icon.png" alt="Unchurnly" width={40} height={40} className="rounded-xl" />
@@ -303,8 +322,7 @@ const authHash = crypto
                 Pick 1 or 2 that best describe your product&apos;s tone.
               </p>
               <div className="grid grid-cols-2 gap-2">
-                {VOICE_TAGS.map(({ emoji, label }) => {
-                  const tag = `${emoji} ${label}`
+                {VOICE_TAGS.map((tag) => {
                   const selected = selectedTags.includes(tag)
                   return (
                     <button
@@ -316,7 +334,7 @@ const authHash = crypto
                           : 'border-border text-muted-foreground hover:border-emerald/30'
                       }`}
                     >
-                      {label}
+                      {tag}
                     </button>
                   )
                 })}
