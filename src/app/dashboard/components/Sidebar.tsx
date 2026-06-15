@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -11,7 +12,6 @@ import {
   Settings,
   LogOut,
   Code2,
-  BookOpen,
   LifeBuoy,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -76,9 +76,7 @@ export default function Sidebar({
     <aside className="flex h-full w-[250px] shrink-0 flex-col border-r border-border bg-sidebar">
       {/* Logo */}
       <div className="flex items-center gap-2.5 border-b border-border px-4 py-4">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-foreground text-xs font-bold text-background">
-          U
-        </div>
+        <Image src="/icon.png" alt="Unchurnly" width={28} height={28} className="rounded-lg shrink-0" unoptimized />
         <span className="text-sm font-semibold text-foreground">Unchurnly</span>
       </div>
 
@@ -147,15 +145,6 @@ export default function Sidebar({
 
       {/* Footer */}
       <div className="border-t border-border px-2 py-2">
-        <a
-          href="#"
-          target="_blank"
-          rel="noreferrer"
-          className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
-        >
-          <BookOpen className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          <span>Documentation</span>
-        </a>
         <a
           href="mailto:support@unchurnly.com"
           className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"

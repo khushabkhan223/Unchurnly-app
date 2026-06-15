@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { createBrowserClient } from '@/lib/supabase'
 
@@ -69,9 +70,7 @@ export default function SignupPage() {
     <div className="w-full max-w-sm">
       {/* Logo */}
       <div className="flex items-center justify-center mb-8">
-        <div className="w-8 h-8 rounded-lg bg-foreground text-background text-sm font-bold flex items-center justify-center">
-          U
-        </div>
+        <Image src="/icon.png" alt="Unchurnly" width={32} height={32} className="rounded-lg" />
         <span className="text-white font-semibold text-lg ml-2">Unchurnly</span>
       </div>
 

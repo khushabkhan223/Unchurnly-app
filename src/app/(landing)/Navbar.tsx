@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 
 export default function Navbar() {
@@ -5,11 +6,8 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-4 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-gray-900 flex items-center justify-center text-white text-xs font-bold shrink-0">
-            U
-          </div>
-          <span className="text-gray-900 font-semibold text-sm">Unchurnly</span>
+        <Link href="/" className="flex items-center">
+          <Image src="/logo.png" alt="Unchurnly" width={600} height={80} className="h-20" style={{ width: 'auto' }} unoptimized />
         </Link>
 
         {/* Nav links */}

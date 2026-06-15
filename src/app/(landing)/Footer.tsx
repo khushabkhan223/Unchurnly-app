@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 
 export default function Footer() {
@@ -5,11 +6,9 @@ export default function Footer() {
     <footer className="border-t border-gray-100 py-10">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Brand */}
-        <div className="flex items-center gap-2.5">
-          <div className="w-6 h-6 rounded-md bg-gray-900 flex items-center justify-center text-white text-[10px] font-bold">
-            U
-          </div>
-          <span className="text-sm text-gray-500">© 2026 Unchurnly</span>
+        <div className="flex items-center gap-3">
+          <Image src="/logo.png" alt="Unchurnly" width={120} height={40} unoptimized />
+          <span className="text-sm text-gray-400">© 2026</span>
         </div>
 
         {/* Links */}

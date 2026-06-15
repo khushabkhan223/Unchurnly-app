@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { CheckCircle, Copy, Check, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react'
 import { createBrowserClient } from '@/lib/supabase'
 
@@ -42,9 +43,13 @@ export default function OnboardingPage() {
   const [widgetConnected, setWidgetConnected] = useState(false)
   const [isCompleting, setIsCompleting] = useState(false)
 
-  // Load app key + userId on step 3
+  // Prefetch dashboard so the route is warm when the user completes onboarding
   useEffect(() => {
-    if (step !== 3) return
+    router.prefetch('/dashboard')
+  }, [router])
+
+  // Load app key + userId eagerly (not gated on step 3) so it's ready instantly
+  useEffect(() => {
     async function loadKey() {
       const res = await fetch('/api/app-keys')
       const data: unknown = await res.json()
@@ -67,11 +72,11 @@ export default function OnboardingPage() {
       if (typeof genPayload.appKey === 'string') setAppKey(genPayload.appKey)
     }
     loadKey()
-  }, [step])
+  }, [])
 
   // Realtime listener for widget ping detection
   useEffect(() => {
-    if (step !== 3 || !userId) return
+    if (!userId) return
     const supabase = createBrowserClient()
     const channel = supabase
       .channel(`onboarding_widget_${userId}`)
@@ -86,7 +91,7 @@ export default function OnboardingPage() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [step, userId])
+  }, [userId])
 
   function toggleTag(tag: string) {
     setSelectedTags((prev) => {
@@ -141,6 +146,10 @@ export default function OnboardingPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ widgetInstalled }),
     })
+    // router.refresh() clears the Next.js router cache so the dashboard server
+    // component re-runs with the newly-set session cookie (onboardingCompleted=true).
+    // Without this, router.push serves a stale cached response and navigation silently fails.
+    router.refresh()
     router.push('/dashboard')
   }
 
@@ -202,9 +211,7 @@ const authHash = crypto
     <div className="min-h-screen bg-background flex flex-col items-center pt-16 px-4">
       {/* Wordmark */}
       <div className="flex items-center gap-2 mb-8">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-foreground text-xs font-bold text-background">
-          U
-        </div>
+        <Image src="/icon.png" alt="Unchurnly" width={40} height={40} className="rounded-xl" />
         <span className="text-foreground font-semibold text-lg">Unchurnly</span>
       </div>
 
