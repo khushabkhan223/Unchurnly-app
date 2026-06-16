@@ -47,11 +47,20 @@ function CheckoutForm({ customerId, userId, setupIntentId }: CheckoutFormProps) 
       return
     }
 
-    await fetch('/api/card-update/set-default', {
+    console.log('Calling set-default with:', { setupIntentId, customerId, userId })
+
+    const res = await fetch('/api/card-update/set-default', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ setupIntentId, customerId, userId }),
     })
+
+    if (!res.ok) {
+      const data = await res.json()
+      setError(data.error ?? 'Failed to update payment method')
+      setIsLoading(false)
+      return
+    }
 
     router.push('/card-update/success')
   }

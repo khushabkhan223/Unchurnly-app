@@ -62,6 +62,7 @@ export async function POST(request: Request) {
         url: `${appUrl}/api/webhooks/stripe?uid=${session.userId}`,
         enabled_events: [
           'invoice.payment_failed',
+          'invoice.payment_succeeded',
           'customer.subscription.deleted',
           'customer.subscription.created',
           'customer.subscription.updated',

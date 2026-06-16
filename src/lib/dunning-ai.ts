@@ -75,7 +75,7 @@ export async function generateAndSendDunning(
     .single()
 
   const user = userRow as UserBrandRow | null
-  const companyName = user?.company_name ?? 'Your provider'
+  const companyName = user?.company_name?.trim() || 'Unchurnly'
   const supportEmail = user?.support_email ?? null
   const businessModel = user?.business_model ?? ''
   const brandVoiceTags = user?.brand_voice

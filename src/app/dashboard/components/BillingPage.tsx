@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+
 const PAYMENT_LINK = process.env.NEXT_PUBLIC_DODO_PAYMENT_LINK ?? '#'
 
 function fmtDate(iso: string | null): string {
@@ -99,6 +101,27 @@ function TrustNote() {
 // ── Active state ──────────────────────────────────────────────
 
 function ActivePlanCard({ subscribed_at }: { subscribed_at: string | null }) {
+  const [portalLoading, setPortalLoading] = useState(false)
+  const [portalError, setPortalError] = useState(false)
+
+  async function openPortal() {
+    setPortalLoading(true)
+    setPortalError(false)
+    try {
+      const res = await fetch('/api/billing/portal', { method: 'POST' })
+      if (!res.ok) throw new Error('portal error')
+      const data = (await res.json()) as { url?: string }
+      if (typeof data.url === 'string') {
+        window.open(data.url, '_blank', 'noopener,noreferrer')
+      } else {
+        setPortalError(true)
+      }
+    } catch {
+      setPortalError(true)
+    }
+    setPortalLoading(false)
+  }
+
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
       <div className="border-b border-border px-6 pb-5 pt-6">
@@ -120,19 +143,27 @@ function ActivePlanCard({ subscribed_at }: { subscribed_at: string | null }) {
         )}
       </div>
 
-      <div className="border-b border-border px-6 py-5">
-        <FeatureList />
-      </div>
-
       <div className="px-6 py-4">
-        <a
-          href={PAYMENT_LINK}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          Manage subscription →
-        </a>
+        {portalError ? (
+          <p className="text-xs text-muted-foreground">
+            Contact{' '}
+            <a
+              href="mailto:support@unchurnly.com"
+              className="text-muted-foreground underline transition-colors hover:text-foreground"
+            >
+              support@unchurnly.com
+            </a>{' '}
+            to manage your subscription.
+          </p>
+        ) : (
+          <button
+            onClick={openPortal}
+            disabled={portalLoading}
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+          >
+            {portalLoading ? 'Opening portal...' : 'Manage subscription →'}
+          </button>
+        )}
       </div>
     </div>
   )

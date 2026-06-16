@@ -102,6 +102,25 @@ export async function POST(request: Request) {
   const stripeKey = decryptToken((connectionData as ConnectionRow).encrypted_access_token)
   const founderStripe = new Stripe(stripeKey, { apiVersion: '2026-04-22.dahlia' })
 
+  try {
+    const stripeCustomer = await founderStripe.customers.retrieve(customerId)
+    if (stripeCustomer && !stripeCustomer.deleted) {
+      await supabase
+        .from('monitored_customers')
+        .update({
+          customer_email: stripeCustomer.email,
+          customer_name: stripeCustomer.name,
+        })
+        .eq('stripe_customer_id', customerId)
+        .eq('user_id', userId)
+    }
+  } catch (err) {
+    logger.warn('Failed to fetch customer details for cancel flow', {
+      reason: err instanceof Error ? err.message : 'unknown'
+    })
+    // Continue — cancel flow action must not be blocked by this
+  }
+
   // Find or create monitored_customer
   const { data: existingCustomer } = await supabase
     .from('monitored_customers')

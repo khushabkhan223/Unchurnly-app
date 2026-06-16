@@ -8,6 +8,7 @@ import { signCardUpdateToken } from '@/lib/session'
 
 type StripeConnectionRow = {
   encrypted_webhook_secret: string | null
+  encrypted_access_token: string
   stripe_baseline_mrr: number
 }
 
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
 
   const { data: connectionData, error: connectionError } = await supabase
     .from('stripe_connections')
-    .select('encrypted_webhook_secret, stripe_baseline_mrr')
+    .select('encrypted_webhook_secret, encrypted_access_token, stripe_baseline_mrr')
     .eq('user_id', uid)
     .maybeSingle()
 
@@ -222,6 +223,25 @@ async function handleInvoicePaymentFailed(
     }
     monitoredCustomerId = (created as IdRow).id
   }
+
+  // Extract customer details directly from invoice payload
+  const invoiceCustomerEmail = typeof invoice.customer_email === 'string'
+    ? invoice.customer_email : null
+  const invoiceCustomerName = typeof invoice.customer_name === 'string'
+    ? invoice.customer_name : null
+  const invoicePlanName = invoice.lines?.data?.[0]?.description ?? null
+  const invoiceMrrAmount = invoice.amount_due ?? null
+
+  // Update monitored_customer with extracted details
+  await supabase
+    .from('monitored_customers')
+    .update({
+      customer_email: invoiceCustomerEmail,
+      customer_name: invoiceCustomerName,
+      plan_name: invoicePlanName,
+      mrr_amount: invoiceMrrAmount,
+    })
+    .eq('id', monitoredCustomerId)
 
   const { data: activeSeq } = await supabase
     .from('dunning_sequences')
