@@ -46,6 +46,7 @@ export default async function DashboardPage() {
   if (!session) redirect('/login')
 
   const supabase = createServerClient()
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
   const [connResult, seqResult, ceResult, impResult, userResult, billingResult] = await Promise.all([
@@ -58,17 +59,17 @@ export default async function DashboardPage() {
       .from('dunning_sequences')
       .select('id, status, started_at, created_at, recovered_mrr_cents, monitored_customers(mrr_amount, customer_email)')
       .eq('user_id', session.userId)
-      .gte('created_at', thirtyDaysAgo),
+      .gte('created_at', ninetyDaysAgo),
     supabase
       .from('cancellation_events')
       .select('id, outcome, created_at, monitored_customers(mrr_amount, customer_email)')
       .eq('user_id', session.userId)
-      .gte('created_at', thirtyDaysAgo),
+      .gte('created_at', ninetyDaysAgo),
     supabase
       .from('widget_impressions')
       .select('id, created_at')
       .eq('user_id', session.userId)
-      .gte('created_at', thirtyDaysAgo),
+      .gte('created_at', ninetyDaysAgo),
     supabase
       .from('users')
       .select('widget_banner_dismissed_at, widget_installed')
@@ -82,6 +83,7 @@ export default async function DashboardPage() {
   ])
 
   const connection = connResult.data ? (connResult.data as ConnectionRow) : null
+  // Last 90 days — covers the chart's widest range; card stats below re-scope to the last 30 days
   const sequences = (seqResult.data ?? []) as unknown as SequenceRow[]
   const cancellations = (ceResult.data ?? []) as unknown as CancellationRow[]
   const impressions = (impResult.data ?? []) as ImpressionRow[]
@@ -96,29 +98,40 @@ export default async function DashboardPage() {
   }
   const billingData = billingResult.data ? (billingResult.data as BillingRow) : null
 
-  const savedEvents = cancellations.filter((e) =>
+  // Card stats stay scoped to the last 30 days, same as before
+  const sequences30 = sequences.filter((s) => s.created_at >= thirtyDaysAgo)
+  const cancellations30 = cancellations.filter((e) => e.created_at >= thirtyDaysAgo)
+  const impressions30 = impressions.filter((i) => i.created_at >= thirtyDaysAgo)
+
+  const savedEvents30 = cancellations30.filter((e) =>
     ['paused', 'discounted'].includes(e.outcome)
   )
-  const recoveredSequences = sequences.filter((s) => s.status === 'recovered')
+  const recoveredSequences30 = sequences30.filter((s) => s.status === 'recovered')
 
   const mrrSaved =
-    savedEvents.reduce((sum, e) => sum + (e.monitored_customers?.mrr_amount ?? 0) / 100, 0) +
-    recoveredSequences.reduce((sum, s) => sum + (s.recovered_mrr_cents ?? 0) / 100, 0)
+    savedEvents30.reduce((sum, e) => sum + (e.monitored_customers?.mrr_amount ?? 0) / 100, 0) +
+    recoveredSequences30.reduce((sum, s) => sum + (s.recovered_mrr_cents ?? 0) / 100, 0)
 
-  const cancellations_saved = cancellations.filter((e) => e.outcome !== 'cancelled').length
-  const cancellations_lost = cancellations.filter((e) => e.outcome === 'cancelled').length
-  const total_events = cancellations.length
+  const cancellations_saved = cancellations30.filter((e) => e.outcome !== 'cancelled').length
+  const cancellations_lost = cancellations30.filter((e) => e.outcome === 'cancelled').length
+  const total_events = cancellations30.length
   const offer_acceptance_rate =
     total_events > 0 ? Math.round((cancellations_saved / total_events) * 1000) / 10 : 0
-  const active_sequences = sequences.filter((s) => s.status === 'active').length
+  const active_sequences = sequences30.filter((s) => s.status === 'active').length
   const roi_multiplier = mrrSaved > 0 ? Math.round((mrrSaved / 49) * 10) / 10 : 0
-  const has_events = total_events > 0 || sequences.length > 0
+  const has_events = total_events > 0 || sequences30.length > 0
 
   const show_widget_banner = !widget_installed && !userData?.widget_banner_dismissed_at
 
-  const daily_data = Array.from({ length: 30 }, (_, i) => {
-    const d = new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000)
-    const dateStr = d.toISOString().slice(0, 10)
+  // Chart data spans the full 90 days fetched above; the client slices to 7/30/90
+  const savedEvents = cancellations.filter((e) =>
+    ['paused', 'discounted'].includes(e.outcome)
+  )
+  const today = new Date()
+  const daily_data = Array.from({ length: 90 }, (_, i) => {
+    const d = new Date(today)
+    d.setDate(today.getDate() - (89 - i))
+    const dateStr = d.toISOString().split('T')[0]
     const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     const mrr_day = savedEvents
       .filter((e) => e.created_at.slice(0, 10) === dateStr)
@@ -128,14 +141,14 @@ export default async function DashboardPage() {
   })
 
   const recent_events = [
-    ...cancellations.map((e) => ({
+    ...cancellations30.map((e) => ({
       type: 'cancellation' as const,
       email: e.monitored_customers?.customer_email ?? '—',
       outcome: e.outcome,
       mrr: (e.monitored_customers?.mrr_amount ?? 0) / 100,
       date: e.created_at,
     })),
-    ...sequences.map((s) => ({
+    ...sequences30.map((s) => ({
       type: 'dunning' as const,
       email: s.monitored_customers?.customer_email ?? '—',
       outcome: s.status,
@@ -153,7 +166,7 @@ export default async function DashboardPage() {
       roi_multiplier={roi_multiplier}
       offer_acceptance_rate={offer_acceptance_rate}
       active_sequences={active_sequences}
-      widget_impressions_30d={impressions.length}
+      widget_impressions_30d={impressions30.length}
       cancellations_saved={cancellations_saved}
       cancellations_lost={cancellations_lost}
       stripe_connected={!!connection}

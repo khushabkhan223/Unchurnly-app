@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils'
 import { createBrowserClient } from '@/lib/supabase'
 
 type DayData = { date: string; mrr_saved: number; impressions: number }
+type ChartRange = 7 | 30 | 90
 type RecentEvent = {
   type: 'cancellation' | 'dunning'
   email: string
@@ -156,6 +157,8 @@ export default function AnalyticsDashboard(props: Props) {
 
   const [bannerVisible, setBannerVisible] = useState(initialShowBanner)
   const [showSuccessToast, setShowSuccessToast] = useState(false)
+  const [chartRange, setChartRange] = useState<ChartRange>(30)
+  const visibleDailyData = daily_data.slice(-chartRange)
 
   const showBillingBanner =
     first_recovery_at !== null &&
@@ -311,26 +314,44 @@ export default function AnalyticsDashboard(props: Props) {
         <div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm font-semibold text-foreground">Recovery Activity</p>
-              <p className="text-xs text-muted-foreground">Last 30 days</p>
+              <p className="text-sm font-semibold text-foreground">
+                Recovery Activity — Last {chartRange} days
+              </p>
             </div>
             <div className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-accent" />
               <span className="text-[10px] font-medium text-muted-foreground">MRR Recovered</span>
             </div>
           </div>
-          {daily_data.length === 0 ? (
+          <div className="flex items-center gap-2">
+            {([7, 30, 90] as ChartRange[]).map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setChartRange(r)}
+                className={cn(
+                  'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                  chartRange === r
+                    ? 'bg-blue-600 text-white'
+                    : 'border border-slate-200 text-slate-600'
+                )}
+              >
+                {r} days
+              </button>
+            ))}
+          </div>
+          {visibleDailyData.length === 0 ? (
             <div className="flex items-center justify-center" style={{ height: 200 }}>
               <p className="text-sm text-muted-foreground">No recovery data for this period.</p>
             </div>
           ) : (
             <div
               role="img"
-              aria-label="Recovery activity chart showing MRR saved over the last 30 days"
+              aria-label={`Recovery activity chart showing MRR saved over the last ${chartRange} days`}
             >
               <ResponsiveContainer width="100%" height={200}>
                 <AreaChart
-                  data={daily_data}
+                  data={visibleDailyData}
                   margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
                 >
                   <defs>
