@@ -23,14 +23,20 @@ export async function calculateMrr(encryptedToken: string, userId: string): Prom
     const key = decryptToken(encryptedToken)
     const founderStripe = new Stripe(key, { apiVersion: '2026-04-22.dahlia' })
     let totalCents = 0
+    let activeCount = 0
+    let trialingCount = 0
 
     for await (const sub of founderStripe.subscriptions.list({ status: 'active', limit: 100 })) {
+      activeCount++
       totalCents += subItemsToCents(sub)
     }
 
     for await (const sub of founderStripe.subscriptions.list({ status: 'trialing', limit: 100 })) {
+      trialingCount++
       totalCents += subItemsToCents(sub)
     }
+
+    logger.info('calculateMrr debug', { userId, activeCount, trialingCount, totalCents })
 
     return totalCents / 100
   } catch (err) {
