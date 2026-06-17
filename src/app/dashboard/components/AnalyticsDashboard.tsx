@@ -159,6 +159,12 @@ export default function AnalyticsDashboard(props: Props) {
   const [showSuccessToast, setShowSuccessToast] = useState(false)
   const [chartRange, setChartRange] = useState<ChartRange>(30)
   const visibleDailyData = daily_data.slice(-chartRange)
+  const tickGap = chartRange === 7 ? 1 : chartRange === 30 ? 2 : 5
+  const lastIndex = visibleDailyData.length - 1
+  const tickIndices: number[] = []
+  for (let i = lastIndex; i >= 0; i -= tickGap) tickIndices.push(i)
+  tickIndices.reverse()
+  const tickValues = tickIndices.map((i) => visibleDailyData[i]?.date)
 
   const showBillingBanner =
     first_recovery_at !== null &&
@@ -370,7 +376,7 @@ export default function AnalyticsDashboard(props: Props) {
                     tick={{ fontSize: 10, fill: 'oklch(0.5 0 0)', fontFamily: 'inherit' }}
                     tickLine={false}
                     axisLine={false}
-                    interval={2}
+                    ticks={tickValues}
                     tickFormatter={fmtDate}
                   />
                   <YAxis
