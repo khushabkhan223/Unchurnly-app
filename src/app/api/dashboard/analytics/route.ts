@@ -15,6 +15,7 @@ type SequenceRow = {
   status: string
   started_at: string
   created_at: string
+  recovered_at: string | null
   recovered_mrr_cents: number | null
   monitored_customers: { mrr_amount: number | null; customer_email: string | null } | null
 }
@@ -46,7 +47,7 @@ export async function GET() {
       .maybeSingle(),
     supabase
       .from('dunning_sequences')
-      .select('id, status, started_at, created_at, recovered_mrr_cents, monitored_customers(mrr_amount, customer_email)')
+      .select('id, status, started_at, created_at, recovered_at, recovered_mrr_cents, monitored_customers(mrr_amount, customer_email)')
       .eq('user_id', session.userId)
       .gte('created_at', ninetyDaysAgo),
     supabase
@@ -116,9 +117,13 @@ export async function GET() {
     d.setDate(today.getDate() - (89 - i))
     const dateStr = d.toISOString().split('T')[0]
     const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    const mrr_day = savedEvents
-      .filter((e) => e.created_at.slice(0, 10) === dateStr)
-      .reduce((sum, e) => sum + (e.monitored_customers?.mrr_amount ?? 0) / 100, 0)
+    const mrr_day =
+      savedEvents
+        .filter((e) => e.created_at.slice(0, 10) === dateStr)
+        .reduce((sum, e) => sum + (e.monitored_customers?.mrr_amount ?? 0) / 100, 0) +
+      sequences
+        .filter((s) => s.status === 'recovered' && s.recovered_at?.slice(0, 10) === dateStr)
+        .reduce((sum, s) => sum + (s.recovered_mrr_cents ?? 0) / 100, 0)
     const imp_day = impressions.filter((i) => i.created_at.slice(0, 10) === dateStr).length
     return { date: label, mrr_saved: Math.round(mrr_day * 100) / 100, impressions: imp_day }
   })
