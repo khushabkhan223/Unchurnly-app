@@ -383,6 +383,8 @@ export default function AnalyticsDashboard(props: Props) {
                     tick={{ fontSize: 10, fill: 'oklch(0.5 0 0)', fontFamily: 'inherit' }}
                     tickLine={false}
                     axisLine={false}
+                    domain={['auto', 'auto']}
+                    tickFormatter={(v: number) => `$${v}`}
                   />
                   <Tooltip
                     content={<ChartTooltip />}
