@@ -26,18 +26,16 @@ export async function GET(request: Request) {
   const rows = (connections ?? []) as ConnectionRow[]
   let updated = 0
   let failed = 0
-  const debugResults: Array<{ userId: string; mrr: number; debug: Record<string, unknown> }> = []
 
   for (const row of rows) {
     try {
-      const result = await calculateMrr(row.encrypted_access_token, row.user_id)
+      const mrr = await calculateMrr(row.encrypted_access_token, row.user_id)
       const { error: updateError } = await supabase
         .from('stripe_connections')
-        .update({ stripe_baseline_mrr: result.mrr })
+        .update({ stripe_baseline_mrr: mrr })
         .eq('user_id', row.user_id)
 
       if (updateError) throw new Error(updateError.message)
-      debugResults.push({ userId: row.user_id, mrr: result.mrr, debug: result.debug })
       updated++
     } catch (err) {
       logger.error('MRR refresh failed for connection', {
@@ -47,5 +45,5 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ updated, failed, debug: debugResults })
+  return NextResponse.json({ updated, failed })
 }
