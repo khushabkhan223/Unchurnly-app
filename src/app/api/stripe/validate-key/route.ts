@@ -109,7 +109,7 @@ export async function POST(request: Request) {
   }
 
   // Seed MRR in the background — non-critical, never blocks the response
-  calculateMrr(encryptedToken).then(async (mrr) => {
+  calculateMrr(encryptedToken, session.userId).then(async (mrr) => {
     if (mrr > 0) {
       await createServerClient()
         .from('stripe_connections')

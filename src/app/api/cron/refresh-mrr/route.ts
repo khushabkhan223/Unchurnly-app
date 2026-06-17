@@ -29,7 +29,7 @@ export async function GET(request: Request) {
 
   for (const row of rows) {
     try {
-      const mrr = await calculateMrr(row.encrypted_access_token)
+      const mrr = await calculateMrr(row.encrypted_access_token, row.user_id)
       const { error: updateError } = await supabase
         .from('stripe_connections')
         .update({ stripe_baseline_mrr: mrr })
