@@ -18,7 +18,12 @@ function subItemsToCents(sub: Stripe.Subscription): number {
   return cents
 }
 
-export async function calculateMrr(encryptedToken: string, userId: string): Promise<number> {
+type MrrDebug = { activeCount: number; trialingCount: number; totalCents: number; error?: string }
+
+export async function calculateMrr(
+  encryptedToken: string,
+  userId: string
+): Promise<{ mrr: number; debug: MrrDebug }> {
   try {
     const key = decryptToken(encryptedToken)
     const founderStripe = new Stripe(key, { apiVersion: '2026-04-22.dahlia' })
@@ -38,12 +43,20 @@ export async function calculateMrr(encryptedToken: string, userId: string): Prom
 
     logger.info('calculateMrr debug', { userId, activeCount, trialingCount, totalCents })
 
-    return totalCents / 100
+    return { mrr: totalCents / 100, debug: { activeCount, trialingCount, totalCents } }
   } catch (err) {
     logger.error('calculateMrr failed', {
       reason: err instanceof Error ? err.message : String(err),
       userId,
     })
-    return 0
+    return {
+      mrr: 0,
+      debug: {
+        activeCount: 0,
+        trialingCount: 0,
+        totalCents: 0,
+        error: err instanceof Error ? err.message : String(err),
+      },
+    }
   }
 }
