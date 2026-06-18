@@ -9,6 +9,7 @@ type CancellationRow = {
   id: string
   outcome: string
   created_at: string
+  monitored_customer_id: string
   monitored_customers: { mrr_amount: number | null; customer_email: string | null } | null
 }
 
@@ -63,7 +64,7 @@ export default async function DashboardPage() {
       .gte('created_at', ninetyDaysAgo),
     supabase
       .from('cancellation_events')
-      .select('id, outcome, created_at, monitored_customers(mrr_amount, customer_email)')
+      .select('id, outcome, created_at, monitored_customer_id, monitored_customers(mrr_amount, customer_email)')
       .eq('user_id', session.userId)
       .gte('created_at', ninetyDaysAgo),
     supabase
@@ -104,8 +105,23 @@ export default async function DashboardPage() {
   const cancellations30 = cancellations.filter((e) => e.created_at >= thirtyDaysAgo)
   const impressions30 = impressions.filter((i) => i.created_at >= thirtyDaysAgo)
 
+  // Latest-outcome-per-customer: only count a save if no later 'cancelled' event superseded it
+  const latestByCustomer = new Map<string, CancellationRow>()
+  for (const e of cancellations) {
+    const existing = latestByCustomer.get(e.monitored_customer_id)
+    if (!existing || e.created_at > existing.created_at) {
+      latestByCustomer.set(e.monitored_customer_id, e)
+    }
+  }
+  const trulySavedCustomerIds = new Set(
+    [...latestByCustomer.entries()]
+      .filter(([, e]) => ['paused', 'discounted'].includes(e.outcome))
+      .map(([id]) => id)
+  )
+
   const savedEvents30 = cancellations30.filter((e) =>
-    ['paused', 'discounted'].includes(e.outcome)
+    ['paused', 'discounted'].includes(e.outcome) &&
+    trulySavedCustomerIds.has(e.monitored_customer_id)
   )
   const recoveredSequences30 = sequences30.filter((s) => s.status === 'recovered')
 
@@ -126,7 +142,8 @@ export default async function DashboardPage() {
 
   // Chart data spans the full 90 days fetched above; the client slices to 7/30/90
   const savedEvents = cancellations.filter((e) =>
-    ['paused', 'discounted'].includes(e.outcome)
+    ['paused', 'discounted'].includes(e.outcome) &&
+    trulySavedCustomerIds.has(e.monitored_customer_id)
   )
   const today = new Date()
   const daily_data = Array.from({ length: 90 }, (_, i) => {
