@@ -127,9 +127,6 @@ export async function POST(request: Request) {
     monitoredCustomerId = (newCustomer as IdRow).id
   }
 
-  let debugSubscriptionsFound: number | string = 'not reached'
-  let debugCaughtError: string | null = null
-
   try {
     const stripeCustomer = await founderStripe.customers.retrieve(customerId)
     if (stripeCustomer && !stripeCustomer.deleted) {
@@ -138,7 +135,6 @@ export async function POST(request: Request) {
         status: 'active',
         limit: 1,
       })
-      debugSubscriptionsFound = subscriptions.data.length
 
       let mrrAmount: number | null = null
       if (subscriptions.data.length > 0) {
@@ -169,9 +165,8 @@ export async function POST(request: Request) {
         .eq('user_id', userId)
     }
   } catch (err) {
-    debugCaughtError = err instanceof Error ? err.message : 'unknown'
     logger.warn('Failed to fetch customer details for cancel flow', {
-      reason: debugCaughtError,
+      reason: err instanceof Error ? err.message : 'unknown',
     })
     // Continue — cancel flow action must not be blocked by this
   }
@@ -216,7 +211,6 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         message: 'Your subscription has been paused for 1 month.',
-        _debug: { subscriptionsFound: debugSubscriptionsFound, error: debugCaughtError },
       })
     }
 
@@ -252,7 +246,6 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         message: `Your ${config.discount_percent}% discount has been applied for 3 months.`,
-        _debug: { subscriptionsFound: debugSubscriptionsFound, error: debugCaughtError },
       })
     }
 
@@ -268,7 +261,6 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         message: 'Your subscription has been cancelled.',
-        _debug: { subscriptionsFound: debugSubscriptionsFound, error: debugCaughtError },
       })
     }
   } catch (err) {

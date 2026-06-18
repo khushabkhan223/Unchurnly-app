@@ -47,8 +47,6 @@ function CheckoutForm({ customerId, userId, setupIntentId }: CheckoutFormProps) 
       return
     }
 
-    console.log('Calling set-default with:', { setupIntentId, customerId, userId })
-
     const res = await fetch('/api/card-update/set-default', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
