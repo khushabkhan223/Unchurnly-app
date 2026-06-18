@@ -102,6 +102,31 @@ export async function POST(request: Request) {
   const stripeKey = decryptToken((connectionData as ConnectionRow).encrypted_access_token)
   const founderStripe = new Stripe(stripeKey, { apiVersion: '2026-04-22.dahlia' })
 
+  // Find or create monitored_customer
+  const { data: existingCustomer } = await supabase
+    .from('monitored_customers')
+    .select('id')
+    .eq('stripe_customer_id', customerId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  let monitoredCustomerId: string
+
+  if (existingCustomer) {
+    monitoredCustomerId = (existingCustomer as IdRow).id
+  } else {
+    const { data: newCustomer, error: insertError } = await supabase
+      .from('monitored_customers')
+      .insert({ user_id: userId, stripe_customer_id: customerId, status: 'active' })
+      .select('id')
+      .single()
+
+    if (insertError || !newCustomer) {
+      return NextResponse.json({ error: 'Database error' }, { status: 500 })
+    }
+    monitoredCustomerId = (newCustomer as IdRow).id
+  }
+
   let debugSubscriptionsFound: number | string = 'not reached'
   let debugCaughtError: string | null = null
 
@@ -149,31 +174,6 @@ export async function POST(request: Request) {
       reason: debugCaughtError,
     })
     // Continue — cancel flow action must not be blocked by this
-  }
-
-  // Find or create monitored_customer
-  const { data: existingCustomer } = await supabase
-    .from('monitored_customers')
-    .select('id')
-    .eq('stripe_customer_id', customerId)
-    .eq('user_id', userId)
-    .maybeSingle()
-
-  let monitoredCustomerId: string
-
-  if (existingCustomer) {
-    monitoredCustomerId = (existingCustomer as IdRow).id
-  } else {
-    const { data: newCustomer, error: insertError } = await supabase
-      .from('monitored_customers')
-      .insert({ user_id: userId, stripe_customer_id: customerId, status: 'active' })
-      .select('id')
-      .single()
-
-    if (insertError || !newCustomer) {
-      return NextResponse.json({ error: 'Database error' }, { status: 500 })
-    }
-    monitoredCustomerId = (newCustomer as IdRow).id
   }
 
   if (action === 'discount' || action === 'pause') {
