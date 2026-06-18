@@ -105,11 +105,36 @@ export async function POST(request: Request) {
   try {
     const stripeCustomer = await founderStripe.customers.retrieve(customerId)
     if (stripeCustomer && !stripeCustomer.deleted) {
+      const subscriptions = await founderStripe.subscriptions.list({
+        customer: customerId,
+        status: 'active',
+        limit: 1,
+      })
+
+      let mrrAmount: number | null = null
+      if (subscriptions.data.length > 0) {
+        const sub = subscriptions.data[0]
+        let cents = 0
+        for (const item of sub.items.data) {
+          const price = item.price
+          if (!price?.unit_amount) continue
+          const qty = item.quantity ?? 1
+          const interval = price.recurring?.interval
+          let monthly = price.unit_amount * qty
+          if (interval === 'year') monthly = monthly / 12
+          else if (interval === 'week') monthly = monthly * 4.33
+          else if (interval === 'day') monthly = monthly * 30
+          cents += monthly
+        }
+        mrrAmount = Math.round(cents)
+      }
+
       await supabase
         .from('monitored_customers')
         .update({
           customer_email: stripeCustomer.email,
           customer_name: stripeCustomer.name,
+          mrr_amount: mrrAmount,
         })
         .eq('stripe_customer_id', customerId)
         .eq('user_id', userId)
