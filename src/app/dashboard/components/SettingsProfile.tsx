@@ -55,12 +55,57 @@ export default function SettingsProfile({
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [pwSaving, setPwSaving] = useState(false)
+  const [pwSaved, setPwSaved] = useState(false)
+  const [pwError, setPwError] = useState<string | null>(null)
+
   function toggleTag(tag: string) {
     setSelectedTags((prev) => {
       if (prev.includes(tag)) return prev.filter((t) => t !== tag)
       if (prev.length < 2) return [...prev, tag]
       return [prev[1], tag]
     })
+  }
+
+  async function handlePasswordChange() {
+    if (!currentPassword) {
+      setPwError('Current password is required.')
+      return
+    }
+    if (newPassword.length < 8) {
+      setPwError('New password must be at least 8 characters.')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setPwError('Passwords do not match.')
+      return
+    }
+    setPwSaving(true)
+    setPwError(null)
+    try {
+      const res = await fetch('/api/settings/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, password: newPassword }),
+      })
+      if (!res.ok) {
+        const data: unknown = await res.json()
+        const p = typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : {}
+        setPwError(typeof p.error === 'string' ? p.error : 'Failed to change password.')
+      } else {
+        setPwSaved(true)
+        setCurrentPassword('')
+        setNewPassword('')
+        setConfirmPassword('')
+        setTimeout(() => setPwSaved(false), 2000)
+      }
+    } catch {
+      setPwError('Network error. Please try again.')
+    }
+    setPwSaving(false)
   }
 
   async function handleSave() {
@@ -96,7 +141,8 @@ export default function SettingsProfile({
   }
 
   return (
-    <div className="w-1/2 overflow-hidden rounded-xl border border-border bg-card">
+    <div className="w-1/2 space-y-5">
+    <div className="overflow-hidden rounded-xl border border-border bg-card">
       {/* Header */}
       <div className="border-b border-border px-6 py-4">
         <SectionLabel>Brand Profile</SectionLabel>
@@ -205,6 +251,78 @@ export default function SettingsProfile({
           )}
         </button>
       </div>
+    </div>
+
+    {/* Security card */}
+    <div className="overflow-hidden rounded-xl border border-border bg-card">
+      <div className="border-b border-border px-6 py-4">
+        <SectionLabel>Security</SectionLabel>
+      </div>
+      <div className="border-b border-border px-6 py-5 space-y-5">
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+            Current Password
+          </label>
+          <input
+            type="password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            placeholder="Your existing password"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+            New Password
+          </label>
+          <input
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="Min. 8 characters"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+            Confirm Password
+          </label>
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Re-enter new password"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </div>
+      </div>
+      <div className="flex items-center justify-between px-6 py-4">
+        <div>
+          {pwError && <p className="text-sm text-destructive">{pwError}</p>}
+        </div>
+        <button
+          onClick={handlePasswordChange}
+          disabled={pwSaving || pwSaved}
+          className={cn(
+            'flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-opacity disabled:opacity-60',
+            pwSaved
+              ? 'bg-emerald/10 text-emerald'
+              : 'bg-emerald text-background hover:opacity-90',
+          )}
+        >
+          {pwSaved ? (
+            <>
+              <Check className="h-3.5 w-3.5" />
+              Saved
+            </>
+          ) : pwSaving ? (
+            'Saving...'
+          ) : (
+            'Change Password'
+          )}
+        </button>
+      </div>
+    </div>
     </div>
   )
 }

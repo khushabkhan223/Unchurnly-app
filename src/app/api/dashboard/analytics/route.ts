@@ -11,6 +11,15 @@ type CancellationRow = {
   monitored_customers: { mrr_amount: number | null; customer_email: string | null } | null
 }
 
+type AllTimeCancellationRow = {
+  outcome: string
+  created_at: string
+  monitored_customer_id: string
+  monitored_customers: { mrr_amount: number | null } | null
+}
+
+type AllTimeSequenceRow = { recovered_mrr_cents: number | null }
+
 type SequenceRow = {
   id: string
   status: string
@@ -40,7 +49,7 @@ export async function GET() {
   const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
-  const [connResult, seqResult, ceResult, impResult, userResult] = await Promise.all([
+  const [connResult, seqResult, ceResult, impResult, userResult, allTimeSeqResult, allTimeCeResult] = await Promise.all([
     supabase
       .from('stripe_connections')
       .select('stripe_baseline_mrr, webhook_configured_at')
@@ -66,6 +75,15 @@ export async function GET() {
       .select('widget_banner_dismissed_at, widget_installed')
       .eq('id', session.userId)
       .maybeSingle(),
+    supabase
+      .from('dunning_sequences')
+      .select('recovered_mrr_cents')
+      .eq('user_id', session.userId)
+      .eq('status', 'recovered'),
+    supabase
+      .from('cancellation_events')
+      .select('outcome, created_at, monitored_customer_id, monitored_customers(mrr_amount)')
+      .eq('user_id', session.userId),
   ])
 
   const connection = connResult.data ? (connResult.data as ConnectionRow) : null
@@ -75,6 +93,8 @@ export async function GET() {
   const impressions = (impResult.data ?? []) as ImpressionRow[]
   const userData = userResult.data ? (userResult.data as UserRow) : null
   const widget_installed = userData?.widget_installed ?? false
+  const allTimeSequences = (allTimeSeqResult.data ?? []) as AllTimeSequenceRow[]
+  const allTimeCancellations = (allTimeCeResult.data ?? []) as unknown as AllTimeCancellationRow[]
 
   // Card stats stay scoped to the last 30 days, same as before
   const sequences30 = sequences.filter((s) => s.created_at >= thirtyDaysAgo)
@@ -145,6 +165,28 @@ export async function GET() {
     return { date: label, mrr_saved: Math.round(mrr_day * 100) / 100, impressions: imp_day }
   })
 
+  // Lifetime recovery: all-time dunning recoveries + cancel-flow saves (latest-outcome-wins)
+  const allTimeLatestByCustomer = new Map<string, AllTimeCancellationRow>()
+  for (const e of allTimeCancellations) {
+    const existing = allTimeLatestByCustomer.get(e.monitored_customer_id)
+    if (!existing || e.created_at > existing.created_at) {
+      allTimeLatestByCustomer.set(e.monitored_customer_id, e)
+    }
+  }
+  const allTimeTrulySavedIds = new Set(
+    [...allTimeLatestByCustomer.entries()]
+      .filter(([, e]) => ['paused', 'discounted'].includes(e.outcome))
+      .map(([id]) => id)
+  )
+  const lifetimeCancelMrr = allTimeCancellations
+    .filter((e) => ['paused', 'discounted'].includes(e.outcome) && allTimeTrulySavedIds.has(e.monitored_customer_id))
+    .reduce((sum, e) => sum + (e.monitored_customers?.mrr_amount ?? 0) / 100, 0)
+  const lifetimeDunningMrr = allTimeSequences.reduce(
+    (sum, s) => sum + (s.recovered_mrr_cents ?? 0) / 100,
+    0
+  )
+  const lifetime_recovery = Math.round((lifetimeCancelMrr + lifetimeDunningMrr) * 100) / 100
+
   // Recent events feed (last 10 combined, scoped to the last 30 days)
   const recentEvents = [
     ...cancellations30.map((e) => ({
@@ -168,6 +210,7 @@ export async function GET() {
   return NextResponse.json({
     mrr_baseline: connection?.stripe_baseline_mrr ?? 0,
     mrr_saved,
+    lifetime_recovery,
     roi_multiplier,
     offer_acceptance_rate,
     active_sequences,

@@ -33,6 +33,7 @@ type RecentEvent = {
 type Props = {
   mrr_baseline: number
   mrr_saved: number
+  lifetime_recovery: number
   roi_multiplier: number
   offer_acceptance_rate: number
   active_sequences: number
@@ -68,6 +69,7 @@ const DEMO: Omit<
   | 'grace_period_ends_at'
 > = {
   mrr_saved: 1240,
+  lifetime_recovery: 2380,
   roi_multiplier: 25.3,
   offer_acceptance_rate: 31.2,
   active_sequences: 4,
@@ -228,7 +230,7 @@ export default function AnalyticsDashboard(props: Props) {
             Cancel flow widget not installed. Customers who try to cancel won&apos;t see your retention offer.
           </p>
           <a
-            href="/dashboard/settings"
+            href="/dashboard/installation"
             className="whitespace-nowrap text-sm text-amber-400 underline transition-colors hover:text-amber-300"
           >
             Install widget →
@@ -278,7 +280,7 @@ export default function AnalyticsDashboard(props: Props) {
             You&apos;re viewing sample data. Connect Stripe to see real metrics.
           </p>
           <a
-            href="/dashboard/settings"
+            href="/dashboard/connect"
             className="whitespace-nowrap text-sm text-blue-400 underline transition-colors hover:text-blue-300"
           >
             Connect Stripe →
@@ -287,11 +289,17 @@ export default function AnalyticsDashboard(props: Props) {
       )}
 
       {/* Metric cards row */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-5 gap-4">
         <MetricCard
           label="MRR Protected"
           value={fmt$(d.mrr_saved)}
           sub="recovered this month"
+          accent="green"
+        />
+        <MetricCard
+          label="Lifetime Recovery"
+          value={fmt$(d.lifetime_recovery)}
+          sub="all time"
           accent="green"
         />
         <MetricCard
@@ -434,13 +442,17 @@ export default function AnalyticsDashboard(props: Props) {
                 <p className="font-mono text-xs font-semibold text-foreground">{recovery_pct}%</p>
               </div>
             </>
+          ) : stripe_connected ? (
+            <p className="py-4 text-sm text-muted-foreground">
+              No active subscriptions yet. Your recovery forecast will appear once you have paying customers.
+            </p>
           ) : (
             <div className="flex flex-col gap-2 py-4">
               <p className="text-sm text-muted-foreground">
                 Connect Stripe to see your recovery forecast.
               </p>
               <a
-                href="/dashboard/settings"
+                href="/dashboard/connect"
                 className="text-sm text-emerald underline-offset-4 hover:underline font-medium transition-opacity hover:opacity-80"
               >
                 Connect Stripe →

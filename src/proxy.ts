@@ -4,7 +4,7 @@ import { verifySessionToken, createSessionToken } from '@/lib/session'
 import { createServerClient } from '@/lib/supabase'
 
 const PROTECTED_PREFIXES = ['/dashboard', '/onboarding']
-const AUTH_PAGES = ['/login', '/signup']
+const AUTH_PAGES = ['/login', '/signup', '/']
 
 const STATIC_EXTENSIONS = [
   '.ico', '.png', '.jpg', '.jpeg', '.svg', '.gif', '.webp',

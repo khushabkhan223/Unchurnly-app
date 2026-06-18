@@ -13,6 +13,15 @@ type CancellationRow = {
   monitored_customers: { mrr_amount: number | null; customer_email: string | null } | null
 }
 
+type AllTimeCancellationRow = {
+  outcome: string
+  created_at: string
+  monitored_customer_id: string
+  monitored_customers: { mrr_amount: number | null } | null
+}
+
+type AllTimeSequenceRow = { recovered_mrr_cents: number | null }
+
 type SequenceRow = {
   id: string
   status: string
@@ -51,7 +60,7 @@ export default async function DashboardPage() {
   const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
-  const [connResult, seqResult, ceResult, impResult, userResult, billingResult] = await Promise.all([
+  const [connResult, seqResult, ceResult, impResult, userResult, billingResult, allTimeSeqResult, allTimeCeResult] = await Promise.all([
     supabase
       .from('stripe_connections')
       .select('stripe_baseline_mrr, webhook_configured_at')
@@ -82,6 +91,15 @@ export default async function DashboardPage() {
       .select('first_recovery_at, subscription_status, grace_period_ends_at')
       .eq('id', session.userId)
       .maybeSingle(),
+    supabase
+      .from('dunning_sequences')
+      .select('recovered_mrr_cents')
+      .eq('user_id', session.userId)
+      .eq('status', 'recovered'),
+    supabase
+      .from('cancellation_events')
+      .select('outcome, created_at, monitored_customer_id, monitored_customers(mrr_amount)')
+      .eq('user_id', session.userId),
   ])
 
   const connection = connResult.data ? (connResult.data as ConnectionRow) : null
@@ -91,6 +109,8 @@ export default async function DashboardPage() {
   const impressions = (impResult.data ?? []) as ImpressionRow[]
   const userData = userResult.data ? (userResult.data as UserRow) : null
   const widget_installed = userData?.widget_installed ?? false
+  const allTimeSequences = (allTimeSeqResult.data ?? []) as AllTimeSequenceRow[]
+  const allTimeCancellations = (allTimeCeResult.data ?? []) as unknown as AllTimeCancellationRow[]
 
   if (billingResult.error) {
     logger.error('Failed to fetch billing fields from users table', {
@@ -140,6 +160,28 @@ export default async function DashboardPage() {
 
   const show_widget_banner = !widget_installed && !userData?.widget_banner_dismissed_at
 
+  // Lifetime recovery: all-time dunning recoveries + cancel-flow saves (latest-outcome-wins)
+  const allTimeLatestByCustomer = new Map<string, AllTimeCancellationRow>()
+  for (const e of allTimeCancellations) {
+    const existing = allTimeLatestByCustomer.get(e.monitored_customer_id)
+    if (!existing || e.created_at > existing.created_at) {
+      allTimeLatestByCustomer.set(e.monitored_customer_id, e)
+    }
+  }
+  const allTimeTrulySavedIds = new Set(
+    [...allTimeLatestByCustomer.entries()]
+      .filter(([, e]) => ['paused', 'discounted'].includes(e.outcome))
+      .map(([id]) => id)
+  )
+  const lifetimeCancelMrr = allTimeCancellations
+    .filter((e) => ['paused', 'discounted'].includes(e.outcome) && allTimeTrulySavedIds.has(e.monitored_customer_id))
+    .reduce((sum, e) => sum + (e.monitored_customers?.mrr_amount ?? 0) / 100, 0)
+  const lifetimeDunningMrr = allTimeSequences.reduce(
+    (sum, s) => sum + (s.recovered_mrr_cents ?? 0) / 100,
+    0
+  )
+  const lifetimeRecovery = Math.round((lifetimeCancelMrr + lifetimeDunningMrr) * 100) / 100
+
   // Chart data spans the full 90 days fetched above; the client slices to 7/30/90
   const savedEvents = cancellations.filter((e) =>
     ['paused', 'discounted'].includes(e.outcome) &&
@@ -185,6 +227,7 @@ export default async function DashboardPage() {
     <AnalyticsDashboard
       mrr_baseline={connection?.stripe_baseline_mrr ?? 0}
       mrr_saved={mrrSaved}
+      lifetime_recovery={lifetimeRecovery}
       roi_multiplier={roi_multiplier}
       offer_acceptance_rate={offer_acceptance_rate}
       active_sequences={active_sequences}

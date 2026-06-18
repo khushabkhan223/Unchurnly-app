@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Copy, Check, AlertTriangle, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react'
 
@@ -37,8 +38,12 @@ export default function InstallationPage({
   appKey: string | null
 }) {
   const state = stripeState(connection)
+  const router = useRouter()
 
   const [appKey, setAppKey] = useState(initialAppKey)
+  const [confirming, setConfirming] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(false)
+  const [disconnectError, setDisconnectError] = useState<string | null>(null)
   const [generatedKey, setGeneratedKey] = useState<GeneratedKey | null>(null)
   const [generating, setGenerating] = useState(false)
   const [genError, setGenError] = useState<string | null>(null)
@@ -75,6 +80,25 @@ const authHash = crypto
       setAppKey(payload.appKey)
     }
     setGenerating(false)
+  }
+
+  async function handleDisconnect() {
+    setDisconnecting(true)
+    setDisconnectError(null)
+    try {
+      const res = await fetch('/api/stripe/disconnect', { method: 'POST' })
+      if (!res.ok) {
+        const data: unknown = await res.json()
+        const p = typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : {}
+        setDisconnectError(typeof p.error === 'string' ? p.error : 'Failed to disconnect.')
+        setDisconnecting(false)
+        return
+      }
+      router.refresh()
+    } catch {
+      setDisconnectError('Network error. Please try again.')
+      setDisconnecting(false)
+    }
   }
 
   async function copySnippet(text: string, id: string) {
@@ -141,6 +165,39 @@ const authHash = crypto
                 <p className="text-xs text-muted-foreground">
                   Webhook: <span className="font-medium text-amber-400">not configured</span>
                 </p>
+              )}
+              {!confirming ? (
+                <button
+                  onClick={() => setConfirming(true)}
+                  className="text-xs text-destructive transition-opacity hover:opacity-70"
+                >
+                  Disconnect Stripe
+                </button>
+              ) : (
+                <div className="space-y-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+                  <p className="text-xs text-muted-foreground">
+                    Are you sure? This will stop all dunning and cancel flow automation until you reconnect.
+                  </p>
+                  {disconnectError && (
+                    <p className="text-xs text-destructive">{disconnectError}</p>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleDisconnect}
+                      disabled={disconnecting}
+                      className="rounded-md bg-destructive px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                    >
+                      {disconnecting ? 'Disconnecting…' : 'Yes, disconnect'}
+                    </button>
+                    <button
+                      onClick={() => { setConfirming(false); setDisconnectError(null) }}
+                      disabled={disconnecting}
+                      className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           )}

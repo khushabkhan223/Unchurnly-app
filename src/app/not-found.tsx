@@ -1,25 +1,22 @@
 export default function NotFound() {
   return (
-    <div
-      style={{ background: '#f9fafb' }}
-      className="flex min-h-screen items-center justify-center px-4"
-    >
-      <div className="mx-auto max-w-sm px-8 text-center">
-        <p className="font-mono text-6xl font-bold text-gray-200">404</p>
-        <h1 className="mt-4 text-xl font-semibold text-gray-900">Page not found</h1>
-        <p className="mt-2 text-sm text-gray-500">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="mx-auto max-w-sm text-center">
+        <p className="font-mono text-7xl font-bold text-muted-foreground/20">404</p>
+        <h1 className="mt-4 text-xl font-semibold text-foreground">Page not found</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
           The page you&apos;re looking for doesn&apos;t exist or has been moved.
         </p>
-        <div className="mt-8">
+        <div className="mt-8 flex items-center justify-center gap-4">
           <a
             href="/"
-            className="rounded-xl bg-gray-900 px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-80"
+            className="rounded-xl bg-emerald px-6 py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-80"
           >
             Go home →
           </a>
           <a
             href="mailto:support@unchurnly.com"
-            className="ml-4 text-sm text-gray-400 transition-colors hover:text-gray-600"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             Contact support
           </a>
