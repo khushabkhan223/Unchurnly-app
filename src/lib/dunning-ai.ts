@@ -39,16 +39,17 @@ async function sendFallbackEmail(
     return
   }
   const resend = new Resend(apiKey)
+  const supportLine = supportEmail
+    ? `<p style="margin:0 0 16px 0;color:#6b7280;font-size:14px">Questions? Email us at ${supportEmail}</p>`
+    : ''
   const html = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#111827">
   <p style="margin:0 0 16px 0">Hi there,</p>
   <p style="margin:0 0 16px 0">We weren't able to process your payment for <strong>${planName}</strong>. Please update your payment method to keep your account active.</p>
-  <p style="margin:0 0 16px 0">If you need help, reply to this email and we'll sort it out.</p>
-  <p style="margin:0;color:#6b7280;font-size:14px">— ${companyName} Billing</p>
+  ${supportLine}<p style="margin:0;color:#6b7280;font-size:14px">— ${companyName} Billing</p>
 </div>`
 
   const { error } = await resend.emails.send({
     from: `${companyName} <billing@unchurnly.com>`,
-    ...(supportEmail ? { replyTo: supportEmail } : {}),
     to,
     subject: `Action needed: payment failed for ${planName}`,
     html,
@@ -104,6 +105,10 @@ export async function generateAndSendDunning(
     currency: 'USD',
   })
 
+  const supportEmailInstruction = supportEmail
+    ? `- If appropriate, end with a brief note like "Questions? Email us at ${supportEmail}" — mention it as plain text only, not as a link.`
+    : ''
+
   const prompt = `You are writing a payment recovery email on behalf of ${companyName}.
 
 Context:
@@ -119,6 +124,15 @@ Rules:
 - Use paragraph breaks (blank lines) to separate thoughts.
 - Keep the email under 120 words.
 - Sign off as "${companyName} Billing" — no person's name.
+${supportEmailInstruction}
+
+Spam filter rules (non-negotiable, override any tone instruction above):
+- Avoid ALL CAPS words.
+- Use at most one exclamation point in the entire email.
+- Never use multiple exclamation points or question marks together.
+- Never use phrases like "Uh oh!", "Don't miss out!", "Act now!", "Urgent!", "Last chance!", or similar alarm-style interjections.
+- Do not start sentences with overly casual interjections.
+- Write in a calm, professional, helpful tone even when the brand voice is enthusiastic — express enthusiasm through positive language, not alarm phrasing.
 
 Return a JSON object with exactly: "subject" (string) and "body" (string).`
 
@@ -153,7 +167,6 @@ Return a JSON object with exactly: "subject" (string) and "body" (string).`
     const resend = new Resend(process.env.RESEND_API_KEY)
     const { error } = await resend.emails.send({
       from: `${companyName} <billing@unchurnly.com>`,
-      ...(supportEmail ? { replyTo: supportEmail } : {}),
       to: customerEmail,
       subject: parsed.subject,
       html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#111827">\n${bodyToHtml(parsed.body)}${ctaHtml}\n</div>`,
