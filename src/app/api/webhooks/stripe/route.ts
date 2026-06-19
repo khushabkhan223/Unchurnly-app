@@ -166,7 +166,10 @@ async function handleInvoicePaymentSucceeded(
 
   await supabase
     .from('users')
-    .update({ first_recovery_at: new Date().toISOString() })
+    .update({
+      first_recovery_at: new Date().toISOString(),
+      grace_period_ends_at: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+    })
     .eq('id', uid)
     .is('first_recovery_at', null)
 

@@ -204,7 +204,10 @@ export async function POST(request: Request) {
 
       await supabase
         .from('users')
-        .update({ first_recovery_at: new Date().toISOString() })
+        .update({
+          first_recovery_at: new Date().toISOString(),
+          grace_period_ends_at: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+        })
         .eq('id', userId)
         .is('first_recovery_at', null)
 
@@ -239,7 +242,10 @@ export async function POST(request: Request) {
 
       await supabase
         .from('users')
-        .update({ first_recovery_at: new Date().toISOString() })
+        .update({
+          first_recovery_at: new Date().toISOString(),
+          grace_period_ends_at: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+        })
         .eq('id', userId)
         .is('first_recovery_at', null)
 

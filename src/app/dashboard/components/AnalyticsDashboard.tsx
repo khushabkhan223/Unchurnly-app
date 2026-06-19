@@ -173,6 +173,31 @@ export default function AnalyticsDashboard(props: Props) {
     subscription_status !== 'active' &&
     (grace_period_ends_at === null || new Date(grace_period_ends_at) > new Date())
 
+  const daysRemaining = grace_period_ends_at
+    ? Math.ceil((new Date(grace_period_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : null
+
+  function getBillingBannerCopy(): string {
+    if (daysRemaining === null) {
+      return 'Your first recovery just happened! Start your $49/month plan to keep Unchurnly protecting your revenue.'
+    }
+    if (daysRemaining >= 3) {
+      return 'Your first recovery just happened! You have 3 days of free access remaining. Start your $49/month plan to keep Unchurnly protecting your revenue.'
+    }
+    if (daysRemaining === 2) {
+      return '2 days left on your free trial. Subscribe now to avoid losing access.'
+    }
+    if (daysRemaining === 1) {
+      return '1 day left! Your dashboard will be locked tomorrow unless you subscribe.'
+    }
+    if (daysRemaining === 0) {
+      return 'Today is your last day of free access. Subscribe now to keep using Unchurnly.'
+    }
+    return 'Your free trial has ended. Subscribe to continue.'
+  }
+
+  const billingBannerUrgent = daysRemaining !== null && daysRemaining <= 1
+
   const paymentLink = process.env.NEXT_PUBLIC_DODO_PAYMENT_LINK ?? '#'
 
   useEffect(() => {
@@ -206,16 +231,16 @@ export default function AnalyticsDashboard(props: Props) {
     <div className="space-y-5">
       {/* Billing prompt — first recovery, not yet subscribed */}
       {showBillingBanner && (
-        <div className="flex items-center gap-3 rounded-xl border border-blue-500/20 bg-blue-500/10 px-4 py-3">
-          <Sparkles className="h-4 w-4 shrink-0 text-blue-400" aria-hidden="true" />
-          <p className="flex-1 text-sm text-blue-300">
-            Your first recovery just happened! Start your $49/month plan to keep Unchurnly protecting your revenue.
+        <div className={`flex items-center gap-3 rounded-xl px-4 py-3 border ${billingBannerUrgent ? 'border-amber-500/20 bg-amber-500/10' : 'border-blue-500/20 bg-blue-500/10'}`}>
+          <Sparkles className={`h-4 w-4 shrink-0 ${billingBannerUrgent ? 'text-amber-400' : 'text-blue-400'}`} aria-hidden="true" />
+          <p className={`flex-1 text-sm ${billingBannerUrgent ? 'text-amber-300' : 'text-blue-300'}`}>
+            {getBillingBannerCopy()}
           </p>
           <a
             href={paymentLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="whitespace-nowrap rounded-md bg-blue-500 px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+            className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90 ${billingBannerUrgent ? 'bg-amber-500' : 'bg-blue-500'}`}
           >
             Start plan →
           </a>
