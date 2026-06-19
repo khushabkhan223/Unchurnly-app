@@ -56,6 +56,7 @@ export async function GET(request: Request) {
 
   const sequences = (sequencesData ?? []) as unknown as SequenceRow[]
   const stats = { processed: 0, sent: 0, failed: 0, skipped: 0 }
+  const debugUrls: { cardUpdateUrl: string; hasAppUrl: boolean }[] = []
 
   for (const sequence of sequences) {
     stats.processed++
@@ -93,10 +94,9 @@ export async function GET(request: Request) {
         const planName = customer.plan_name ?? 'your subscription'
         const amountDue = customer.mrr_amount ?? 0
 
-        logger.info('cron: card update url constructed', {
-          cardUpdateUrl,
-          hasAppUrl: !!process.env.NEXT_PUBLIC_APP_URL,
-        })
+        const hasAppUrl = !!process.env.NEXT_PUBLIC_APP_URL
+        logger.info('cron: card update url constructed', { cardUpdateUrl, hasAppUrl })
+        debugUrls.push({ cardUpdateUrl, hasAppUrl })
 
         await generateAndSendDunning(
           sequence.user_id,
@@ -128,7 +128,7 @@ export async function GET(request: Request) {
     await maybeCompleteSequence(supabase, sequence.id)
   }
 
-  return NextResponse.json(stats)
+  return NextResponse.json({ ...stats, _debug: debugUrls })
 }
 
 async function maybeCompleteSequence(
