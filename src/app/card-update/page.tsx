@@ -10,6 +10,7 @@ type Props = {
 
 type ConnectionRow = {
   encrypted_access_token: string
+  stripe_publishable_key: string | null
 }
 
 export default async function CardUpdatePage({ searchParams }: Props) {
@@ -30,7 +31,7 @@ export default async function CardUpdatePage({ searchParams }: Props) {
   const supabase = createServerClient()
   const { data: connectionData } = await supabase
     .from('stripe_connections')
-    .select('encrypted_access_token')
+    .select('encrypted_access_token, stripe_publishable_key')
     .eq('user_id', userId)
     .maybeSingle()
 
@@ -39,6 +40,10 @@ export default async function CardUpdatePage({ searchParams }: Props) {
   }
 
   const connection = connectionData as ConnectionRow
+
+  if (!connection.stripe_publishable_key) {
+    return <ReconnectPage />
+  }
 
   const stripeKey = decryptToken(connection.encrypted_access_token)
   const founderStripe = new Stripe(stripeKey, { apiVersion: '2026-04-22.dahlia' })
@@ -57,7 +62,7 @@ export default async function CardUpdatePage({ searchParams }: Props) {
     return <ErrorPage />
   }
 
-  const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
+  const publishableKey = connection.stripe_publishable_key
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -79,6 +84,23 @@ function ErrorPage() {
         <h1 className="text-lg font-semibold text-gray-900 mb-2">Link unavailable</h1>
         <p className="text-sm text-gray-500">
           This link has expired or is invalid. Please contact support.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function ReconnectPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 max-w-sm w-full text-center">
+        <h1 className="text-lg font-semibold text-gray-900 mb-2">Account setup required</h1>
+        <p className="text-sm text-gray-500">
+          This account needs to update its Stripe connection. Please contact{' '}
+          <a href="mailto:support@unchurnly.com" className="underline">
+            support@unchurnly.com
+          </a>
+          .
         </p>
       </div>
     </div>

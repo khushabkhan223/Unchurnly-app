@@ -37,6 +37,7 @@ export default function OnboardingPage() {
 
   // Step 2
   const [stripeKey, setStripeKey] = useState('')
+  const [publishableKey, setPublishableKey] = useState('')
   const [stripeError, setStripeError] = useState<string | null>(null)
   const [isConnecting, setIsConnecting] = useState(false)
   const [stripeConnected, setStripeConnected] = useState(false)
@@ -132,7 +133,7 @@ export default function OnboardingPage() {
     const res = await fetch('/api/stripe/validate-key', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ restrictedKey: stripeKey }),
+      body: JSON.stringify({ restrictedKey: stripeKey, publishableKey }),
     })
     if (!res.ok) {
       const data: unknown = await res.json()
@@ -407,11 +408,28 @@ const authHash = crypto
                   />
                 </div>
 
+                <div>
+                  <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2 block">
+                    Publishable Key
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="pk_test_... or pk_live_..."
+                    value={publishableKey}
+                    onChange={(e) => setPublishableKey(e.target.value)}
+                    autoComplete="off"
+                    className="w-full rounded-md border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    Found next to your restricted key in Stripe Dashboard → Developers → API Keys
+                  </p>
+                </div>
+
                 {stripeError && <p className="text-sm text-destructive">{stripeError}</p>}
 
                 <button
                   onClick={handleConnectStripe}
-                  disabled={isConnecting || !stripeKey.trim()}
+                  disabled={isConnecting || !stripeKey.trim() || !publishableKey.trim()}
                   className="w-full px-4 py-2.5 bg-emerald text-background text-sm font-medium rounded-lg disabled:opacity-50 transition-opacity hover:opacity-90"
                 >
                   {isConnecting ? 'Validating…' : 'Connect Stripe →'}

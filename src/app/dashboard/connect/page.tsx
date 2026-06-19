@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 
 export default function ConnectPage() {
   const [restrictedKey, setRestrictedKey] = useState('')
+  const [publishableKey, setPublishableKey] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -28,7 +29,7 @@ export default function ConnectPage() {
     const res = await fetch('/api/stripe/validate-key', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ restrictedKey }),
+      body: JSON.stringify({ restrictedKey, publishableKey }),
     })
 
     const data: unknown = await res.json()
@@ -73,6 +74,21 @@ export default function ConnectPage() {
                 onChange={(e) => setRestrictedKey(e.target.value)}
                 autoComplete="off"
               />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="publishableKey">Publishable key</Label>
+              <Input
+                id="publishableKey"
+                type="text"
+                placeholder="pk_test_... or pk_live_..."
+                required
+                value={publishableKey}
+                onChange={(e) => setPublishableKey(e.target.value)}
+                autoComplete="off"
+              />
+              <p className="text-xs text-muted-foreground">
+                Found next to your restricted key in Stripe Dashboard → Developers → API Keys
+              </p>
             </div>
             {error && (
               <p role="alert" className="text-sm text-destructive">
