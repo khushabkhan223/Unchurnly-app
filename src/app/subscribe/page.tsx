@@ -7,10 +7,11 @@ export default async function SubscribePage() {
   const session = token ? await verifySessionToken(token) : null
 
   const base = process.env.NEXT_PUBLIC_DODO_PAYMENT_LINK ?? '#'
-  const paymentLink =
-    base !== '#' && session?.userId
-      ? `${base}?metadata_unchurnly_user_id=${encodeURIComponent(session.userId)}`
-      : base
+  const paymentLink = (() => {
+    if (base === '#' || !session?.userId) return base
+    const sep = base.includes('?') ? '&' : '?'
+    return `${base}${sep}metadata_unchurnly_user_id=${encodeURIComponent(session.userId)}`
+  })()
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-white px-4">

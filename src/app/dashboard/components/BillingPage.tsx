@@ -5,7 +5,8 @@ import { useState } from 'react'
 function buildPaymentLink(userId: string): string {
   const base = process.env.NEXT_PUBLIC_DODO_PAYMENT_LINK ?? '#'
   if (base === '#') return base
-  return `${base}?metadata_unchurnly_user_id=${encodeURIComponent(userId)}`
+  const sep = base.includes('?') ? '&' : '?'
+  return `${base}${sep}metadata_unchurnly_user_id=${encodeURIComponent(userId)}`
 }
 
 function fmtDate(iso: string | null): string {
