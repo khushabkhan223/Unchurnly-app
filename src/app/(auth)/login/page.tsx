@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -18,7 +18,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [resetSuccess, setResetSuccess] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    setResetSuccess(new URLSearchParams(window.location.search).get('reset') === '1')
+  }, [])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -63,6 +68,11 @@ export default function LoginPage() {
       <p className="text-sm text-muted-foreground mb-6">
         Enter your email and password to access your dashboard.
       </p>
+      {resetSuccess && (
+        <p className="text-sm text-emerald bg-emerald/10 border border-emerald/20 rounded-lg px-3 py-2.5 mb-4">
+          Password updated. Sign in with your new password.
+        </p>
+      )}
       <form onSubmit={handleSubmit}>
         <label htmlFor="email" className={labelClass}>
           Email
@@ -77,9 +87,14 @@ export default function LoginPage() {
           placeholder="you@example.com"
           className={inputClass}
         />
-        <label htmlFor="password" className={`${labelClass} mt-4`}>
-          Password
-        </label>
+        <div className="flex items-center justify-between mt-4 mb-1.5">
+          <label htmlFor="password" className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
+            Password
+          </label>
+          <Link href="/forgot-password" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+            Forgot password?
+          </Link>
+        </div>
         <input
           id="password"
           type="password"
