@@ -93,6 +93,11 @@ export async function GET(request: Request) {
         const planName = customer.plan_name ?? 'your subscription'
         const amountDue = customer.mrr_amount ?? 0
 
+        logger.info('cron: card update url constructed', {
+          cardUpdateUrl,
+          hasAppUrl: !!process.env.NEXT_PUBLIC_APP_URL,
+        })
+
         await generateAndSendDunning(
           sequence.user_id,
           planName,
