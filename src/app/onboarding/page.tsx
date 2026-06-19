@@ -389,7 +389,7 @@ const authHash = crypto
                   <p className="font-medium text-foreground">How to create a restricted key:</p>
                   <p>Stripe Dashboard → Developers → API Keys → Create restricted key</p>
                   <p className="text-xs text-muted-foreground/70">
-                    Permissions: Customers (read), Subscriptions (write), Invoices (read), Webhook
+                    Permissions: Customers (write), Subscriptions (write), Invoices (read), Webhook
                     endpoints (write), Coupons (write)
                   </p>
                 </div>

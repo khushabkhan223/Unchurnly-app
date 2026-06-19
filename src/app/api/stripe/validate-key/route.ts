@@ -121,6 +121,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to save connection' }, { status: 500 })
   }
 
+  // Auto-create default cancel flow config if none exists
+  try {
+    const { data: existingConfig } = await supabase
+      .from('cancel_flow_configs')
+      .select('id')
+      .eq('user_id', session.userId)
+      .maybeSingle()
+
+    if (!existingConfig) {
+      const coupon = await founderStripe.coupons.create({
+        percent_off: 20,
+        duration: 'repeating',
+        duration_in_months: 3,
+        name: 'Unchurnly Retention Discount',
+      })
+
+      await supabase.from('cancel_flow_configs').insert({
+        user_id: session.userId,
+        discount_enabled: true,
+        discount_percent: 20,
+        pause_enabled: true,
+        stripe_coupon_id: coupon.id,
+      })
+    }
+  } catch (err) {
+    logger.warn('Auto-create cancel_flow_config failed — non-blocking', {
+      reason: err instanceof Error ? err.message : 'unknown',
+    })
+  }
+
   // Seed MRR in the background — non-critical, never blocks the response
   calculateMrr(encryptedToken, session.userId).then(async (mrr) => {
     if (mrr > 0) {

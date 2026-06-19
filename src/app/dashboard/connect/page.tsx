@@ -57,8 +57,8 @@ export default function ConnectPage() {
           <CardTitle>Connect your Stripe account</CardTitle>
           <CardDescription>
             In your Stripe Dashboard &rarr; Developers &rarr; API Keys &rarr; Create
-            restricted key. Give it these permissions: Customers (read), Subscriptions
-            (read), Invoices (read), Webhook endpoints (write). Paste the key below.
+            restricted key. Give it these permissions: Customers (write), Subscriptions
+            (write), Invoices (read), Webhook endpoints (write), Coupons (write). Paste the key below.
           </CardDescription>
         </CardHeader>
         <CardContent>
