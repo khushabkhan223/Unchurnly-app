@@ -11,6 +11,7 @@ type DodoSubscriptionData = {
   subscription_id?: string
   customer?: DodoCustomer
   next_billing_date?: string
+  metadata?: Record<string, string>
 }
 
 type DodoWebhookPayload = {
@@ -56,18 +57,21 @@ export async function POST(request: Request): Promise<Response> {
   const { type, data } = payload
 
   try {
-    const customerEmail = data?.customer?.email
-    if (!customerEmail) {
+    const unchurnlyUserId = data?.metadata?.unchurnly_user_id
+
+    if (!unchurnlyUserId) {
+      logger.warn('Dodo webhook missing unchurnly_user_id metadata', { eventType: type })
       return new Response(null, { status: 200 })
     }
 
     const { data: userRow } = await supabase
       .from('users')
       .select('id')
-      .eq('email', customerEmail)
+      .eq('id', unchurnlyUserId)
       .maybeSingle()
 
     if (!userRow) {
+      logger.error('Dodo webhook: no matching user found', { unchurnlyUserId, eventType: type })
       return new Response(null, { status: 200 })
     }
 

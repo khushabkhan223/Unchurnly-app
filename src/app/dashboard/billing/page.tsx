@@ -33,6 +33,7 @@ export default async function Billing() {
       first_recovery_at={row?.first_recovery_at ?? null}
       subscribed_at={row?.subscribed_at ?? null}
       grace_period_ends_at={row?.grace_period_ends_at ?? null}
+      userId={session.userId}
     />
   )
 }

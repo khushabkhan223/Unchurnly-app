@@ -2,7 +2,11 @@
 
 import { useState } from 'react'
 
-const PAYMENT_LINK = process.env.NEXT_PUBLIC_DODO_PAYMENT_LINK ?? '#'
+function buildPaymentLink(userId: string): string {
+  const base = process.env.NEXT_PUBLIC_DODO_PAYMENT_LINK ?? '#'
+  if (base === '#') return base
+  return `${base}?metadata_unchurnly_user_id=${encodeURIComponent(userId)}`
+}
 
 function fmtDate(iso: string | null): string {
   if (!iso) return ''
@@ -25,6 +29,7 @@ type Props = {
   first_recovery_at: string | null
   subscribed_at: string | null
   grace_period_ends_at: string | null
+  userId: string
 }
 
 function PulseDot({ color = 'emerald' }: { color?: 'emerald' | 'amber' }) {
@@ -203,7 +208,7 @@ function BillingDetailsCard() {
 
 // ── Has recovery / needs subscription ────────────────────────
 
-function RecoveryUpgradeCard() {
+function RecoveryUpgradeCard({ paymentHref }: { paymentHref: string }) {
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
       <div className="flex items-center gap-2.5 border-b border-emerald/10 bg-emerald/5 px-6 py-3.5">
@@ -228,7 +233,7 @@ function RecoveryUpgradeCard() {
       </div>
 
       <div className="px-6 py-5">
-        <CTAButton href={PAYMENT_LINK}>Start $49/month plan</CTAButton>
+        <CTAButton href={paymentHref}>Start $49/month plan</CTAButton>
         <TrustNote />
       </div>
     </div>
@@ -289,7 +294,7 @@ function FreeTierCard() {
 
 // ── Cancelled ─────────────────────────────────────────────────
 
-function CancelledCard() {
+function CancelledCard({ paymentHref }: { paymentHref: string }) {
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
       <div className="border-b border-border px-6 pb-5 pt-6">
@@ -315,7 +320,7 @@ function CancelledCard() {
       </div>
 
       <div className="px-6 py-5">
-        <CTAButton href={PAYMENT_LINK}>Resubscribe for $49/month</CTAButton>
+        <CTAButton href={paymentHref}>Resubscribe for $49/month</CTAButton>
         <TrustNote />
       </div>
     </div>
@@ -324,7 +329,7 @@ function CancelledCard() {
 
 // ── Payment issue ─────────────────────────────────────────────
 
-function PaymentIssueCard() {
+function PaymentIssueCard({ paymentHref }: { paymentHref: string }) {
   return (
     <div className="overflow-hidden rounded-xl border border-amber-500/20 bg-card">
       <div className="flex items-center gap-2.5 border-b border-amber-500/10 bg-amber-500/5 px-6 py-3.5">
@@ -341,7 +346,7 @@ function PaymentIssueCard() {
 
       <div className="px-6 py-4">
         <a
-          href={PAYMENT_LINK}
+          href={paymentHref}
           target="_blank"
           rel="noopener noreferrer"
           className="text-sm font-medium text-emerald transition-opacity hover:opacity-80"
@@ -356,12 +361,13 @@ function PaymentIssueCard() {
 // ── Root ──────────────────────────────────────────────────────
 
 export default function BillingPage(props: Props) {
-  const { subscription_status, first_recovery_at, subscribed_at } = props
+  const { subscription_status, first_recovery_at, subscribed_at, userId } = props
   const isActive = subscription_status === 'active'
   const isCancelled = subscription_status === 'cancelled'
   const isPaymentIssue =
     subscription_status === 'on_hold' || subscription_status === 'expired'
   const hasRecovery = first_recovery_at !== null
+  const paymentHref = buildPaymentLink(userId)
 
   if (isActive) {
     return (
@@ -375,11 +381,11 @@ export default function BillingPage(props: Props) {
   return (
     <div className="max-w-xl">
       {isCancelled ? (
-        <CancelledCard />
+        <CancelledCard paymentHref={paymentHref} />
       ) : isPaymentIssue ? (
-        <PaymentIssueCard />
+        <PaymentIssueCard paymentHref={paymentHref} />
       ) : hasRecovery ? (
-        <RecoveryUpgradeCard />
+        <RecoveryUpgradeCard paymentHref={paymentHref} />
       ) : (
         <FreeTierCard />
       )}

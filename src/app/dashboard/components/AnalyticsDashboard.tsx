@@ -198,7 +198,11 @@ export default function AnalyticsDashboard(props: Props) {
 
   const billingBannerUrgent = daysRemaining !== null && daysRemaining <= 1
 
-  const paymentLink = process.env.NEXT_PUBLIC_DODO_PAYMENT_LINK ?? '#'
+  const paymentLink = (() => {
+    const base = process.env.NEXT_PUBLIC_DODO_PAYMENT_LINK ?? '#'
+    if (base === '#') return base
+    return `${base}?metadata_unchurnly_user_id=${encodeURIComponent(userId)}`
+  })()
 
   useEffect(() => {
     const supabase = createBrowserClient()

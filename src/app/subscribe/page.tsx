@@ -1,5 +1,16 @@
-export default function SubscribePage() {
-  const paymentLink = process.env.NEXT_PUBLIC_DODO_PAYMENT_LINK ?? '#'
+import { cookies } from 'next/headers'
+import { verifySessionToken } from '@/lib/session'
+
+export default async function SubscribePage() {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('session')?.value
+  const session = token ? await verifySessionToken(token) : null
+
+  const base = process.env.NEXT_PUBLIC_DODO_PAYMENT_LINK ?? '#'
+  const paymentLink =
+    base !== '#' && session?.userId
+      ? `${base}?metadata_unchurnly_user_id=${encodeURIComponent(session.userId)}`
+      : base
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-white px-4">
