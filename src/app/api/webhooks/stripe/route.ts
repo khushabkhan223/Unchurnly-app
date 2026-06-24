@@ -5,6 +5,7 @@ import { createServerClient } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
 import { generateAndSendDunning } from '@/lib/dunning-ai'
 import { signCardUpdateToken } from '@/lib/session'
+import { posthogServer } from '@/lib/posthog-server'
 
 type StripeConnectionRow = {
   encrypted_webhook_secret: string | null
@@ -164,6 +165,13 @@ async function handleInvoicePaymentSucceeded(
     })
     .eq('id', (activeSeq as IdRow).id)
 
+  const { data: beforeUpdate } = await supabase
+    .from('users')
+    .select('first_recovery_at')
+    .eq('id', uid)
+    .is('first_recovery_at', null)
+    .maybeSingle()
+
   await supabase
     .from('users')
     .update({
@@ -172,6 +180,10 @@ async function handleInvoicePaymentSucceeded(
     })
     .eq('id', uid)
     .is('first_recovery_at', null)
+
+  if (beforeUpdate) {
+    posthogServer.capture({ distinctId: uid, event: 'first_recovery', properties: { type: 'dunning' } })
+  }
 
   logger.info('Dunning sequence marked recovered', {
     sequenceId: (activeSeq as IdRow).id,

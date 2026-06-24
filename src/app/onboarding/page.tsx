@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { CheckCircle, Copy, Check, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react'
 import { createBrowserClient } from '@/lib/supabase'
+import { posthog } from '@/lib/posthog'
 
 const VOICE_TAGS = [
   'Formal / Corporate',
@@ -124,6 +125,7 @@ export default function OnboardingPage() {
       }),
     })
     setIsSavingProfile(false)
+    posthog.capture('onboarding_step1_completed')
     setStep(2)
   }
 
@@ -145,6 +147,7 @@ export default function OnboardingPage() {
       setIsConnecting(false)
       return
     }
+    posthog.capture('onboarding_stripe_connected')
     setStripeConnected(true)
     setIsConnecting(false)
   }
@@ -156,6 +159,7 @@ export default function OnboardingPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ widgetInstalled }),
     })
+    posthog.capture('onboarding_completed')
     // router.refresh() clears the Next.js router cache so the dashboard server
     // component re-runs with the newly-set session cookie (onboardingCompleted=true).
     // Without this, router.push serves a stale cached response and navigation silently fails.

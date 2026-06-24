@@ -1,6 +1,7 @@
 import { Webhook } from 'svix'
 import { createServerClient } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
+import { posthogServer } from '@/lib/posthog-server'
 
 type DodoCustomer = {
   email?: string
@@ -80,6 +81,19 @@ export async function POST(request: Request): Promise<Response> {
 
     switch (type) {
       case 'subscription.active':
+        posthogServer.capture({ distinctId: userId, event: 'subscribed' })
+        await supabase
+          .from('users')
+          .update({
+            subscription_status: 'active',
+            subscribed_at: now,
+            dodo_subscription_id: data.subscription_id ?? null,
+            dodo_customer_id: data.customer?.customer_id ?? null,
+            grace_period_ends_at: null,
+          })
+          .eq('id', userId)
+        break
+
       case 'subscription.renewed':
         await supabase
           .from('users')

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { createBrowserClient } from '@/lib/supabase'
+import { posthog } from '@/lib/posthog'
 
 const inputClass =
   'w-full bg-card border border-border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-white/20 transition-colors'
@@ -38,6 +39,7 @@ export default function SignupPage() {
       return
     }
 
+    posthog.capture('signup_completed')
     setEmailSent(true)
   }
 

@@ -4,6 +4,7 @@ import { verifyHmac } from '@/lib/hmac'
 import { decryptToken } from '@/lib/crypto'
 import { createServerClient } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
+import { posthogServer } from '@/lib/posthog-server'
 
 type AppKeyRow = { user_id: string; encrypted_app_secret: string }
 type ConnectionRow = { encrypted_access_token: string }
@@ -202,6 +203,13 @@ export async function POST(request: Request) {
         outcome: 'paused',
       })
 
+      const { data: pauseFirstCheck } = await supabase
+        .from('users')
+        .select('first_recovery_at')
+        .eq('id', userId)
+        .is('first_recovery_at', null)
+        .maybeSingle()
+
       await supabase
         .from('users')
         .update({
@@ -210,6 +218,10 @@ export async function POST(request: Request) {
         })
         .eq('id', userId)
         .is('first_recovery_at', null)
+
+      if (pauseFirstCheck) {
+        posthogServer.capture({ distinctId: userId, event: 'first_recovery', properties: { type: 'cancel_flow' } })
+      }
 
       return NextResponse.json({
         success: true,
@@ -240,6 +252,13 @@ export async function POST(request: Request) {
         outcome: 'discounted',
       })
 
+      const { data: discountFirstCheck } = await supabase
+        .from('users')
+        .select('first_recovery_at')
+        .eq('id', userId)
+        .is('first_recovery_at', null)
+        .maybeSingle()
+
       await supabase
         .from('users')
         .update({
@@ -248,6 +267,10 @@ export async function POST(request: Request) {
         })
         .eq('id', userId)
         .is('first_recovery_at', null)
+
+      if (discountFirstCheck) {
+        posthogServer.capture({ distinctId: userId, event: 'first_recovery', properties: { type: 'cancel_flow' } })
+      }
 
       return NextResponse.json({
         success: true,
